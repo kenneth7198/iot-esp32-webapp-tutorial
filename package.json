@@ -1,0 +1,63 @@
+{
+  "name": "iot-crossmedia-system",
+  "version": "1.0.0",
+  "description": "輕量級 IoT Cross-Media 教學系統 - 使用 jQuery + Bootstrap",
+  "main": "start-education.js",
+  "scripts": {
+    "setup-education": "node setup-education.js",
+    "start-education": "node start-education.js",
+    "frontend": "cd frontend-simple && npm start",
+    "backend": "cd backend-simple && npm start",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "install-all": "npm install && cd frontend-simple && npm install && cd ../backend-simple && npm install",
+    "test": "npm run test-backend && npm run test-frontend",
+    "test-backend": "cd backend-simple && npm test",
+    "test-frontend": "cd frontend-simple && npm test",
+    "clean": "rm -rf node_modules frontend-simple/node_modules backend-simple/node_modules",
+    "reset-db": "cd backend-simple && node scripts/reset-database.js"
+  },
+  "keywords": [
+    "iot",
+    "education",
+    "teaching",
+    "crossmedia",
+    "lightweight",
+    "student-friendly"
+  ],
+  "author": "IoT Cross-Media Team",
+  "license": "MIT",
+  "devDependencies": {
+    "chalk": "^4.1.2",
+    "concurrently": "^7.6.0",
+    "fs-extra": "^11.3.0",
+    "inquirer": "^8.2.6",
+    "ora": "^5.4.1"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kenneth7198/IoT-Cross-Media-Tutorial"
+  },
+  "educational": {
+    "level": "university",
+    "duration": "4-weeks",
+    "prerequisites": [
+      "基礎 JavaScript 知識",
+      "HTML/CSS 基礎",
+      "基本命令列操作"
+    ],
+    "learning-outcomes": [
+      "理解 IoT 系統架構",
+      "掌握前後端分離開發",
+      "學會 API 設計和使用",
+      "體驗即時資料處理",
+      "了解媒體檔案處理"
+    ]
+  }
+}

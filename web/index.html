@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESP32 MQTT 控制台（手機可用）</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { padding: 1rem; }
+    .log { height: 200px; overflow:auto; background:#111; color:#0f0; font-family: monospace; padding:8px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h3 class="mb-3">ESP32 MQTT 控制台</h3>
+  <div class="row g-3">
+    <div class="col-12 col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">連線設定</h5>
+          <div class="mb-2">
+            <label class="form-label">WebSocket URL</label>
+            <input id="wsUrl" class="form-control" placeholder="ws://localhost:9001" value="ws://localhost:9001" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">裝置 ID</label>
+            <input id="deviceId" class="form-control" placeholder="esp32-01" value="esp32-01" />
+          </div>
+          <button id="btnConnect" class="btn btn-primary">Connect</button>
+          <button id="btnDisconnect" class="btn btn-outline-secondary">Disconnect</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">控制</h5>
+          <div class="input-group mb-2">
+            <span class="input-group-text">LED</span>
+            <select id="ledVal" class="form-select">
+              <option value="1">ON</option>
+              <option value="0">OFF</option>
+            </select>
+            <button id="btnSendLed" class="btn btn-success">Send</button>
+          </div>
+          <div class="input-group">
+            <span class="input-group-text">自訂 Topic</span>
+            <input id="pubTopic" class="form-control" placeholder="test/topic" />
+            <input id="pubPayload" class="form-control" placeholder='{"hello":1}' />
+            <button id="btnPub" class="btn btn-secondary">Publish</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">訊息</h5>
+          <div class="mb-2">
+            <label class="form-label">訂閱 Topic（以逗號分隔）</label>
+            <input id="subTopics" class="form-control" value="iot/+/+/sensor/+,iot/+/+/status" />
+            <button id="btnSub" class="btn btn-outline-primary mt-2">Subscribe</button>
+          </div>
+          <pre class="log" id="log"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+let client;
+const log = (s) => { const el = document.getElementById('log'); el.textContent += s + '\n'; el.scrollTop = el.scrollHeight; }
+
+document.getElementById('btnConnect').onclick = () => {
+  const url = document.getElementById('wsUrl').value.trim();
+  client = mqtt.connect(url);
+  client.on('connect', () => log('[WS] connected'));
+  client.on('reconnect', () => log('[WS] reconnect'));
+  client.on('error', (e) => log('[WS] error: ' + e.message));
+  client.on('message', (t, p) => log(`[MSG] ${t} : ${p}`));
+};
+
+// 手機搖晃偵測（DeviceMotion）
+let lastShake = 0;
+window.addEventListener('devicemotion', function(e) {
+  const acc = e.accelerationIncludingGravity;
+  if (!acc) return;
+  const mag = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
+  const now = Date.now();
+  if (mag > 18 && now - lastShake > 2000) { // 阈值與防抖
+    lastShake = now;
+    if (client && client.connected) {
+      const dev = document.getElementById('deviceId').value.trim();
+      const topic = `iot/lab/${dev}/cmd/led`;
+      const payload = JSON.stringify({ cmd: 'led', value: 1, ts: Date.now(), source: 'shake' });
+      client.publish(topic, payload, { qos: 1 });
+      log(`[SHAKE] ${topic} : ${payload}`);
+    }
+  }
+});
+
+document.getElementById('btnDisconnect').onclick = () => { if (client) client.end(); };
+
+document.getElementById('btnSub').onclick = () => {
+  if (!client) return;
+  const list = document.getElementById('subTopics').value.split(',').map(s => s.trim()).filter(Boolean);
+  list.forEach(tp => client.subscribe(tp, err => log(err ? `[SUB] fail: ${tp}` : `[SUB] ok: ${tp}`)));
+};
+
+document.getElementById('btnSendLed').onclick = () => {
+  if (!client) return;
+  const dev = document.getElementById('deviceId').value.trim();
+  const topic = `iot/lab/${dev}/cmd/led`;
+  const payload = JSON.stringify({ cmd: 'led', value: Number(document.getElementById('ledVal').value), ts: Date.now() });
+  client.publish(topic, payload, { qos: 1 });
+  log(`[PUB] ${topic} : ${payload}`);
+};
+
+document.getElementById('btnPub').onclick = () => {
+  if (!client) return;
+  const tp = document.getElementById('pubTopic').value.trim();
+  const pl = document.getElementById('pubPayload').value;
+  client.publish(tp, pl);
+  log(`[PUB] ${tp} : ${pl}`);
+};
+</script>
+</body>
+</html>

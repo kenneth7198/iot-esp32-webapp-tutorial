@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing 視覺控制 - IoT MQTT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .control-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .effect-btn {
+            width: 100%;
+            height: 100px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .effect-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        #status {
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="control-card">
+            <h1 class="text-center mb-4">🎨 Processing 視覺控制台</h1>
+            <div id="status" class="disconnected mb-4">⏳ 連線中...</div>
+            
+            <div class="mb-3">
+                <label class="form-label">MQTT Broker IP</label>
+                <input type="text" id="brokerIp" class="form-control" value="localhost" placeholder="localhost 或 192.168.1.100">
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label">Device ID</label>
+                <input type="text" id="deviceId" class="form-control" value="esp32-01">
+            </div>
+            
+            <button class="btn btn-primary w-100 mb-4" onclick="connectMQTT()">🔌 連線 MQTT</button>
+        </div>
+
+        <!-- 色彩視覺化控制 -->
+        <div class="control-card">
+            <h3>🌈 色彩視覺化 (IoT_Art_Visualizer)</h3>
+            <p class="text-muted">點擊顏色產生視覺效果</p>
+            <div class="row">
+                <div class="col-4"><button class="effect-btn btn btn-danger" onclick="sendColor('#e74c3c')">紅色</button></div>
+                <div class="col-4"><button class="effect-btn btn btn-success" onclick="sendColor('#2ecc71')">綠色</button></div>
+                <div class="col-4"><button class="effect-btn btn btn-primary" onclick="sendColor('#3498db')">藍色</button></div>
+                <div class="col-4"><button class="effect-btn btn btn-warning" onclick="sendColor('#f39c12')">橙色</button></div>
+                <div class="col-4"><button class="effect-btn btn btn-info" onclick="sendColor('#1abc9c')">青色</button></div>
+                <div class="col-4"><button class="effect-btn btn btn-secondary" onclick="sendColor('#9b59b6')">紫色</button></div>
+            </div>
+        </div>
+
+        <!-- 粒子系統控制 -->
+        <div class="control-card">
+            <h3>💫 粒子系統 (IoT_Particle_System)</h3>
+            <p class="text-muted">觸發不同粒子效果</p>
+            <button class="effect-btn btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);" onclick="sendParticle('explosion')">💥 爆炸</button>
+            <button class="effect-btn btn" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);" onclick="sendParticle('rain')">🌧️ 雨滴</button>
+            <button class="effect-btn btn" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);" onclick="sendParticle('wave')">🌊 波浪</button>
+            <button class="effect-btn btn" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);" onclick="sendParticle('spiral')">🌀 螺旋</button>
+        </div>
+
+        <!-- 3D 方塊控制 -->
+        <div class="control-card">
+            <h3>🎲 3D 方塊 (IoT_3D_Cube)</h3>
+            <p class="text-muted">控制 3D 方塊旋轉</p>
+            <div class="row mb-3">
+                <div class="col-4">
+                    <label>X 軸</label>
+                    <input type="range" class="form-range" min="0" max="6.28" step="0.1" value="0" id="rotX" oninput="send3D()">
+                </div>
+                <div class="col-4">
+                    <label>Y 軸</label>
+                    <input type="range" class="form-range" min="0" max="6.28" step="0.1" value="0" id="rotY" oninput="send3D()">
+                </div>
+                <div class="col-4">
+                    <label>Z 軸</label>
+                    <input type="range" class="form-range" min="0" max="6.28" step="0.1" value="0" id="rotZ" oninput="send3D()">
+                </div>
+            </div>
+            <button class="btn btn-info w-100" onclick="randomRotation()">🎲 隨機旋轉</button>
+        </div>
+
+        <!-- 影片控制 -->
+        <div class="control-card">
+            <h3>🎬 影片藝術 (IoT_Video_Art)</h3>
+            <p class="text-muted">控制影片播放與濾鏡</p>
+            <div class="row mb-3">
+                <div class="col-3"><button class="btn btn-success w-100" onclick="sendVideo('play')">▶️ 播放</button></div>
+                <div class="col-3"><button class="btn btn-warning w-100" onclick="sendVideo('pause')">⏸️ 暫停</button></div>
+                <div class="col-3"><button class="btn btn-danger w-100" onclick="sendVideo('stop')">⏹️ 停止</button></div>
+                <div class="col-3"><button class="btn btn-info w-100" onclick="sendVideo('reverse')">⏪ 倒轉</button></div>
+            </div>
+            <select class="form-select" onchange="sendVideoFilter(this.value)">
+                <option value="none">無濾鏡</option>
+                <option value="tint">色調濾鏡</option>
+                <option value="blur">模糊濾鏡</option>
+                <option value="pixelate">像素化</option>
+            </select>
+        </div>
+
+        <!-- 生成藝術控制 -->
+        <div class="control-card">
+            <h3>🎨 生成藝術 (IoT_Generative_Art)</h3>
+            <p class="text-muted">觸發藝術生成</p>
+            <button class="effect-btn btn btn-primary" onclick="triggerGenArt()">✨ 產生藝術</button>
+            <button class="btn btn-outline-secondary w-100" onclick="clearGenArt()">🗑️ 清空畫布</button>
+        </div>
+    </div>
+
+    <script>
+        let client = null;
+        let deviceId = 'esp32-01';
+
+        function connectMQTT() {
+            const brokerIp = document.getElementById('brokerIp').value;
+            deviceId = document.getElementById('deviceId').value;
+            const brokerUrl = `ws://${brokerIp}:9001`;
+
+            document.getElementById('status').textContent = '⏳ 連線中...';
+            document.getElementById('status').className = 'disconnected';
+
+            client = mqtt.connect(brokerUrl);
+
+            client.on('connect', () => {
+                console.log('MQTT 已連線');
+                document.getElementById('status').textContent = '✅ 已連線';
+                document.getElementById('status').className = 'connected';
+            });
+
+            client.on('error', (err) => {
+                console.error('MQTT 錯誤:', err);
+                document.getElementById('status').textContent = '❌ 連線失敗';
+                document.getElementById('status').className = 'disconnected';
+            });
+        }
+
+        function sendColor(color) {
+            if (!client) { alert('請先連線 MQTT'); return; }
+            const topic = `iot/lab/${deviceId}/cmd/color`;
+            const payload = JSON.stringify({ cmd: 'color', value: color });
+            client.publish(topic, payload);
+            console.log('發送:', topic, payload);
+        }
+
+        function sendParticle(type) {
+            if (!client) { alert('請先連線 MQTT'); return; }
+            const topic = `iot/lab/${deviceId}/cmd/particle`;
+            const payload = JSON.stringify({ cmd: 'particle', type: type, count: 50 });
+            client.publish(topic, payload);
+            console.log('發送:', topic, payload);
+        }
+
+        function send3D() {
+            if (!client) return;
+            const x = parseFloat(document.getElementById('rotX').value);
+            const y = parseFloat(document.getElementById('rotY').value);
+            const z = parseFloat(document.getElementById('rotZ').value);
+            const topic = `iot/lab/${deviceId}/cmd/3d`;
+            const payload = JSON.stringify({ cmd: 'rotate', x: x, y: y, z: z });
+            client.publish(topic, payload);
+        }
+
+        function randomRotation() {
+            document.getElementById('rotX').value = Math.random() * 6.28;
+            document.getElementById('rotY').value = Math.random() * 6.28;
+            document.getElementById('rotZ').value = Math.random() * 6.28;
+            send3D();
+        }
+
+        function sendVideo(action) {
+            if (!client) { alert('請先連線 MQTT'); return; }
+            const topic = `iot/lab/${deviceId}/cmd/video`;
+            const payload = JSON.stringify({ cmd: 'video', action: action });
+            client.publish(topic, payload);
+            console.log('發送:', topic, payload);
+        }
+
+        function sendVideoFilter(filter) {
+            if (!client) return;
+            const topic = `iot/lab/${deviceId}/cmd/video`;
+            const payload = JSON.stringify({ cmd: 'video', filter: filter });
+            client.publish(topic, payload);
+        }
+
+        function triggerGenArt() {
+            if (!client) { alert('請先連線 MQTT'); return; }
+            const topic = `iot/lab/${deviceId}/sensor/touch`;
+            const payload = JSON.stringify({ deviceId: deviceId, type: 'touch', value: 1 });
+            client.publish(topic, payload);
+        }
+
+        function clearGenArt() {
+            if (!client) { alert('請先連線 MQTT'); return; }
+            const topic = `iot/lab/${deviceId}/cmd/button`;
+            const payload = JSON.stringify({ cmd: 'button', pressed: true });
+            client.publish(topic, payload);
+        }
+
+        // 自動連線
+        window.onload = () => {
+            connectMQTT();
+        };
+    </script>
+</body>
+</html>
