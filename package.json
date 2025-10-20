@@ -6,7 +6,7 @@
     "start:mqtt": "/usr/local/opt/mosquitto/sbin/mosquitto -c mosquitto.conf -v",
     "start:server": "node server/websocket-server.js",
     "start": "npm run start:mqtt & npm run start:server",
-    "open": "open web/esp32-led-control.html"
+    "open": "open http://192.168.100.200:8081/esp32-led-control.html"
   },
   "keywords": [
     "iot",

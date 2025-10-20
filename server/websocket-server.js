@@ -1,18 +1,90 @@
-// WebSocket 伺服器 - 處理前端事件並與 MQTT Broker 通訊
+// WebSocket 伺服器 + HTTP 靜態檔案伺服器
 const WebSocket = require('ws');
 const mqtt = require('mqtt');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 // 設定
-const WS_PORT = 8080;  // WebSocket 伺服器端口（給前端用）
+const HTTP_PORT = 8081;  // HTTP 伺服器端口（給靜態檔案用）
+const WS_PORT = 8080;    // WebSocket 伺服器端口（給前端用）
 const MQTT_BROKER = 'mqtt://localhost:1883';  // Mosquitto MQTT Broker
 
 // MQTT 主題
 const TOPIC_LED_CONTROL = 'sensor/LED';
 const TOPIC_LED_STATUS = 'status/led';
 
+// MIME types
+const mimeTypes = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
+};
+
+// 建立 HTTP 伺服器（提供靜態檔案）
+const httpServer = http.createServer((req, res) => {
+  // 處理根路徑
+  let filePath = req.url === '/' ? '/index.html' : req.url;
+  
+  // 建立完整路徑
+  filePath = path.join(__dirname, '..', 'web', filePath);
+  
+  // 取得副檔名
+  const extname = path.extname(filePath);
+  const contentType = mimeTypes[extname] || 'text/plain';
+  
+  // 讀取並回傳檔案
+  fs.readFile(filePath, (err, content) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 - 檔案不存在</h1>', 'utf-8');
+      } else {
+        res.writeHead(500);
+        res.end(`伺服器錯誤: ${err.code}`, 'utf-8');
+      }
+    } else {
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(content, 'utf-8');
+    }
+  });
+});
+
+httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
+  // 取得本機 IP
+  const networkInterfaces = require('os').networkInterfaces();
+  const addresses = [];
+  
+  for (const name of Object.keys(networkInterfaces)) {
+    for (const net of networkInterfaces[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        addresses.push(net.address);
+      }
+    }
+  }
+  
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🌐 HTTP 靜態檔案伺服器已啟動');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`📱 手機訪問: http://192.168.100.200:${HTTP_PORT}/esp32-led-control.html`);
+  console.log(`💻 本機訪問: http://localhost:${HTTP_PORT}/esp32-led-control.html`);
+  if (addresses.length > 0) {
+    addresses.forEach(addr => {
+      console.log(`🔗 網路訪問: http://${addr}:${HTTP_PORT}/esp32-led-control.html`);
+    });
+  }
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+});
+
 // 建立 WebSocket 伺服器
 const wss = new WebSocket.Server({ port: WS_PORT });
-console.log(`[WebSocket] 伺服器運行於 ws://localhost:${WS_PORT}`);
+console.log(`[WebSocket] 伺服器運行於 ws://0.0.0.0:${WS_PORT}`);
 
 // 連接到 MQTT Broker
 const mqttClient = mqtt.connect(MQTT_BROKER);
@@ -188,9 +260,15 @@ process.on('SIGINT', () => {
   // 斷開 MQTT
   mqttClient.end();
   
+  // 關閉 HTTP 伺服器
+  httpServer.close(() => {
+    console.log('[HTTP] HTTP 伺服器已關閉');
+  });
+  
   // 關閉 WebSocket 伺服器
   wss.close(() => {
-    console.log('[系統] 伺服器已關閉');
+    console.log('[WebSocket] WebSocket 伺服器已關閉');
+    console.log('[系統] 所有服務已關閉');
     process.exit(0);
   });
 });

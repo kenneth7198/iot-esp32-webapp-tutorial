@@ -88,7 +88,7 @@
         <!-- 標題與狀態 -->
         <div class="text-center mb-4">
           <h2 class="mb-3">
-            <i class="fas fa-lightbulb"></i> ESP32 LED 控制器 v2
+            <i class="fas fa-lightbulb"></i> ESP32 LED 控制器 v1
           </h2>
           <div id="connectionStatus" class="status-badge status-disconnected">
             <i class="fas fa-circle-notch fa-spin"></i> 未連線
@@ -100,8 +100,8 @@
           <h5><i class="fas fa-network-wired"></i> WebSocket 伺服器</h5>
           <div class="mb-3">
             <input type="text" id="wsUrl" class="form-control" 
-                   value="ws://localhost:8080"
-                   placeholder="ws://localhost:8080">
+                   value="ws://192.168.100.200:8080"
+                   placeholder="ws://192.168.100.200:8080">
           </div>
           <div class="d-grid gap-2">
             <button id="btnConnect" class="btn btn-primary">
