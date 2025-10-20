@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ESP32 LED 控制器</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 1rem;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .main-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      margin: 0 auto;
+      max-width: 600px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .status-connected {
+      background: #10b981;
+      color: white;
+    }
+    .status-disconnected {
+      background: #ef4444;
+      color: white;
+    }
+    .led-button {
+      width: 100%;
+      height: 80px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border-radius: 15px;
+      border: none;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .led-button:active {
+      transform: scale(0.95);
+    }
+    .led-on {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(251, 191, 36, 0.5);
+    }
+    .led-off {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(107, 114, 128, 0.3);
+    }
+    .shake-button {
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+      border-radius: 15px;
+      padding: 1rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+    .shake-button:active {
+      transform: scale(0.95);
+    }
+    .shake-button.active {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
+      50% { box-shadow: 0 0 0 20px rgba(236, 72, 153, 0); }
+    }
+    .log-container {
+      background: #1f2937;
+      color: #10b981;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      height: 200px;
+      overflow-y: auto;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .log-entry {
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+    .log-time {
+      color: #6b7280;
+    }
+    .log-topic {
+      color: #60a5fa;
+    }
+    .led-status-indicator {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: inline-block;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+    .led-status-on {
+      background: #fbbf24;
+      box-shadow: 0 0 30px #fbbf24;
+    }
+    .led-status-off {
+      background: #4b5563;
+    }
+    .config-input {
+      border-radius: 10px;
+      border: 2px solid #e5e7eb;
+      padding: 0.75rem;
+      transition: border-color 0.3s ease;
+    }
+    .config-input:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .btn-custom {
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .section-title {
+      color: #1f2937;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .shake-indicator {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 2rem;
+      border-radius: 20px;
+      font-size: 1.5rem;
+      z-index: 9999;
+      animation: fadeInOut 1s ease;
+    }
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main-card">
+      <div class="card-body p-4">
+        <!-- 標題與狀態 -->
+        <div class="text-center mb-4">
+          <h2 class="mb-3">
+            <i class="fas fa-lightbulb"></i> ESP32 LED 控制器
+          </h2>
+          <div id="connectionStatus" class="status-badge status-disconnected">
+            <i class="fas fa-circle-notch fa-spin"></i> 未連線
+          </div>
+        </div>
+
+        <!-- 連線設定 -->
+        <div class="mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-network-wired"></i> 連線設定
+          </h5>
+          <div class="mb-3">
+            <label class="form-label">MQTT Broker (WebSocket URL)</label>
+            <input type="text" id="mqttUrl" class="form-control config-input" 
+                   placeholder="ws://192.168.100.200:9001" 
+                   value="ws://192.168.100.200:9001">
+            <small class="text-muted">範例: ws://您的電腦IP:9001</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Client ID（選填）</label>
+            <input type="text" id="clientId" class="form-control config-input" 
+                   placeholder="自動生成" 
+                   value="">
+            <small class="text-muted">留空則自動生成唯一 ID</small>
+          </div>
+          <div class="d-grid gap-2">
+            <button id="btnConnect" class="btn btn-primary btn-custom">
+              <i class="fas fa-plug"></i> 連線
+            </button>
+            <button id="btnDisconnect" class="btn btn-outline-secondary btn-custom" disabled>
+              <i class="fas fa-plug-circle-xmark"></i> 斷線
+            </button>
+          </div>
+        </div>
+
+        <hr>
+
+        <!-- LED 控制區 -->
+        <div class="mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-toggle-on"></i> LED 控制
+          </h5>
+          <div class="text-center mb-3">
+            <span class="led-status-indicator led-status-off" id="ledIndicator"></span>
+            <p class="mt-2 mb-0" id="ledStatusText">LED 狀態: <strong>OFF</strong></p>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <button class="led-button led-on" id="btnLedOn" disabled>
+                <i class="fas fa-sun"></i> 開啟
+              </button>
+            </div>
+            <div class="col-6">
+              <button class="led-button led-off" id="btnLedOff" disabled>
+                <i class="fas fa-moon"></i> 關閉
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 搖晃偵測 -->
+        <div class="mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-mobile-screen-button"></i> 搖晃控制
+          </h5>
+          <button class="shake-button w-100" id="btnShake" disabled>
+            <i class="fas fa-mobile-screen"></i> 啟用搖晃偵測
+          </button>
+          <small class="text-muted d-block mt-2">
+            <i class="fas fa-info-circle"></i> 搖動手機可觸發 LED 開啟
+          </small>
+        </div>
+
+        <hr>
+
+        <!-- 訊息日誌 -->
+        <div>
+          <h5 class="section-title">
+            <i class="fas fa-terminal"></i> 訊息日誌
+          </h5>
+          <div class="log-container" id="logContainer"></div>
+          <button class="btn btn-sm btn-outline-secondary mt-2" id="btnClearLog">
+            <i class="fas fa-trash"></i> 清除日誌
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 搖晃提示 -->
+  <div class="shake-indicator" id="shakeIndicator">
+    <i class="fas fa-mobile-screen-button fa-shake"></i> 偵測到搖晃！
+  </div>
+
+  <!-- MQTT.js -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    // ========== 全域變數 ==========
+    let mqttClient = null;
+    let isConnected = false;
+    let shakeEnabled = false;
+    let lastShakeTime = 0;
+    let currentLedState = false;
+
+    // MQTT 主題設定（對應 ESP32 程式碼）
+    const TOPIC_LED_CONTROL = "sensor/LED";  // 發送控制指令
+    const TOPIC_LED_STATUS = "status/led";   // 接收 LED 狀態
+
+    // ========== DOM 元素 ==========
+    const elements = {
+      mqttUrl: document.getElementById('mqttUrl'),
+      clientId: document.getElementById('clientId'),
+      btnConnect: document.getElementById('btnConnect'),
+      btnDisconnect: document.getElementById('btnDisconnect'),
+      btnLedOn: document.getElementById('btnLedOn'),
+      btnLedOff: document.getElementById('btnLedOff'),
+      btnShake: document.getElementById('btnShake'),
+      btnClearLog: document.getElementById('btnClearLog'),
+      connectionStatus: document.getElementById('connectionStatus'),
+      ledIndicator: document.getElementById('ledIndicator'),
+      ledStatusText: document.getElementById('ledStatusText'),
+      logContainer: document.getElementById('logContainer'),
+      shakeIndicator: document.getElementById('shakeIndicator')
+    };
+
+    // ========== 日誌函式 ==========
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      const colors = {
+        info: '#10b981',
+        success: '#22c55e',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        mqtt: '#60a5fa'
+      };
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.style.color = colors[type] || colors.info;
+      logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${message}`;
+      
+      elements.logContainer.appendChild(logEntry);
+      elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
+    }
+
+    // ========== 更新連線狀態 ==========
+    function updateConnectionStatus(connected) {
+      isConnected = connected;
+      
+      if (connected) {
+        elements.connectionStatus.className = 'status-badge status-connected';
+        elements.connectionStatus.innerHTML = '<i class="fas fa-check-circle"></i> 已連線';
+        elements.btnConnect.disabled = true;
+        elements.btnDisconnect.disabled = false;
+        elements.btnLedOn.disabled = false;
+        elements.btnLedOff.disabled = false;
+        elements.btnShake.disabled = false;
+      } else {
+        elements.connectionStatus.className = 'status-badge status-disconnected';
+        elements.connectionStatus.innerHTML = '<i class="fas fa-times-circle"></i> 未連線';
+        elements.btnConnect.disabled = false;
+        elements.btnDisconnect.disabled = true;
+        elements.btnLedOn.disabled = true;
+        elements.btnLedOff.disabled = true;
+        elements.btnShake.disabled = true;
+        shakeEnabled = false;
+        elements.btnShake.classList.remove('active');
+        elements.btnShake.innerHTML = '<i class="fas fa-mobile-screen"></i> 啟用搖晃偵測';
+      }
+    }
+
+    // ========== 更新 LED 狀態顯示 ==========
+    function updateLedStatus(isOn) {
+      currentLedState = isOn;
+      
+      if (isOn) {
+        elements.ledIndicator.className = 'led-status-indicator led-status-on';
+        elements.ledStatusText.innerHTML = 'LED 狀態: <strong style="color: #f59e0b;">ON</strong>';
+      } else {
+        elements.ledIndicator.className = 'led-status-indicator led-status-off';
+        elements.ledStatusText.innerHTML = 'LED 狀態: <strong style="color: #6b7280;">OFF</strong>';
+      }
+    }
+
+    // ========== 連線到 MQTT Broker ==========
+    function connectMQTT() {
+      const url = elements.mqttUrl.value.trim();
+      if (!url) {
+        addLog('請輸入 MQTT Broker URL', 'error');
+        return;
+      }
+
+      addLog(`正在連線到 ${url}...`, 'info');
+      
+      // 生成 Client ID
+      const clientId = elements.clientId.value.trim() || `webapp_${Math.random().toString(16).slice(2, 10)}`;
+      
+      // 連線選項
+      const options = {
+        clientId: clientId,
+        clean: true,
+        reconnectPeriod: 5000,
+        connectTimeout: 30000
+      };
+
+      mqttClient = mqtt.connect(url, options);
+
+      // 連線成功
+      mqttClient.on('connect', () => {
+        addLog('✅ MQTT 連線成功！', 'success');
+        updateConnectionStatus(true);
+        
+        // 訂閱狀態主題
+        mqttClient.subscribe(TOPIC_LED_STATUS, (err) => {
+          if (!err) {
+            addLog(`📡 已訂閱主題: ${TOPIC_LED_STATUS}`, 'mqtt');
+          } else {
+            addLog(`❌ 訂閱失敗: ${err.message}`, 'error');
+          }
+        });
+      });
+
+      // 接收訊息
+      mqttClient.on('message', (topic, payload) => {
+        const message = payload.toString();
+        addLog(`<span class="log-topic">📥 ${topic}</span>: ${message}`, 'mqtt');
+        
+        // 解析 JSON 並更新 LED 狀態
+        try {
+          const data = JSON.parse(message);
+          if (data.GPIO23) {
+            const ledState = (data.GPIO23 === 'on' || data.GPIO23 === 'ON');
+            updateLedStatus(ledState);
+            addLog(`🔄 LED 狀態已更新: ${ledState ? 'ON' : 'OFF'}`, 'success');
+          }
+        } catch (e) {
+          // 不是 JSON 格式，忽略
+        }
+      });
+
+      // 重新連線
+      mqttClient.on('reconnect', () => {
+        addLog('🔄 正在重新連線...', 'warning');
+      });
+
+      // 錯誤處理
+      mqttClient.on('error', (err) => {
+        addLog(`❌ 錯誤: ${err.message}`, 'error');
+      });
+
+      // 離線
+      mqttClient.on('offline', () => {
+        addLog('⚠️ 離線', 'warning');
+        updateConnectionStatus(false);
+      });
+
+      // 斷線
+      mqttClient.on('close', () => {
+        addLog('🔌 連線已關閉', 'info');
+        updateConnectionStatus(false);
+      });
+    }
+
+    // ========== 斷線 ==========
+    function disconnectMQTT() {
+      if (mqttClient) {
+        mqttClient.end();
+        mqttClient = null;
+        addLog('已斷線', 'info');
+      }
+    }
+
+    // ========== 發送 LED 控制指令 ==========
+    function sendLedCommand(state) {
+      if (!isConnected || !mqttClient) {
+        addLog('❌ 尚未連線！', 'error');
+        return;
+      }
+
+      // 建立 JSON 格式（對應 ESP32 程式碼）
+      const payload = JSON.stringify({
+        GPIO23: state ? "on" : "off"
+      });
+
+      mqttClient.publish(TOPIC_LED_CONTROL, payload, { qos: 1 }, (err) => {
+        if (!err) {
+          addLog(`📤 已發送指令: ${payload}`, 'success');
+          updateLedStatus(state);
+        } else {
+          addLog(`❌ 發送失敗: ${err.message}`, 'error');
+        }
+      });
+    }
+
+    // ========== 搖晃偵測 ==========
+    function enableShakeDetection() {
+      if (!isConnected) {
+        addLog('❌ 請先連線！', 'error');
+        return;
+      }
+
+      shakeEnabled = !shakeEnabled;
+      
+      if (shakeEnabled) {
+        elements.btnShake.classList.add('active');
+        elements.btnShake.innerHTML = '<i class="fas fa-mobile-screen fa-shake"></i> 搖晃偵測已啟用';
+        addLog('📳 搖晃偵測已啟用', 'success');
+        
+        // 請求裝置動作權限（iOS 13+）
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+          DeviceMotionEvent.requestPermission()
+            .then(permissionState => {
+              if (permissionState === 'granted') {
+                addLog('✅ 已獲得動作感測器權限', 'success');
+              }
+            })
+            .catch(console.error);
+        }
+      } else {
+        elements.btnShake.classList.remove('active');
+        elements.btnShake.innerHTML = '<i class="fas fa-mobile-screen"></i> 啟用搖晃偵測';
+        addLog('📴 搖晃偵測已停用', 'info');
+      }
+    }
+
+    // 監聽裝置動作
+    window.addEventListener('devicemotion', (event) => {
+      if (!shakeEnabled || !isConnected) return;
+      
+      const acc = event.accelerationIncludingGravity;
+      if (!acc) return;
+      
+      // 計算加速度大小
+      const magnitude = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+      const now = Date.now();
+      
+      // 偵測搖晃（閾值 18，防抖 2 秒）
+      if (magnitude > 18 && now - lastShakeTime > 2000) {
+        lastShakeTime = now;
+        
+        // 顯示搖晃提示
+        elements.shakeIndicator.style.display = 'block';
+        setTimeout(() => {
+          elements.shakeIndicator.style.display = 'none';
+        }, 1000);
+        
+        // 發送 LED ON 指令
+        sendLedCommand(true);
+        addLog('📳 偵測到搖晃！已開啟 LED', 'warning');
+      }
+    });
+
+    // ========== 事件監聽器 ==========
+    elements.btnConnect.addEventListener('click', connectMQTT);
+    elements.btnDisconnect.addEventListener('click', disconnectMQTT);
+    elements.btnLedOn.addEventListener('click', () => sendLedCommand(true));
+    elements.btnLedOff.addEventListener('click', () => sendLedCommand(false));
+    elements.btnShake.addEventListener('click', enableShakeDetection);
+    elements.btnClearLog.addEventListener('click', () => {
+      elements.logContainer.innerHTML = '';
+      addLog('日誌已清除', 'info');
+    });
+
+    // ========== 初始化 ==========
+    window.addEventListener('load', () => {
+      addLog('🚀 ESP32 LED 控制器已就緒', 'success');
+      addLog('💡 請先設定 MQTT Broker 並連線', 'info');
+    });
+  </script>
+</body>
+</html>
