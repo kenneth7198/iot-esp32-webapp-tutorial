@@ -1,28 +1,26 @@
 {
   "name": "iot-esp32-webapp-tutorial",
   "version": "1.0.0",
-  "description": "ESP32 IoT 網頁應用程式教學 - MQTT Broker + Web 介面",
-  "main": "server/broker.js",
+  "description": "ESP32 IoT 網頁應用程式教學 - Mosquitto MQTT + WebSocket Server",
   "scripts": {
-    "start": "node server/broker.js",
-    "dev": "node server/broker.js"
+    "start:mqtt": "/usr/local/opt/mosquitto/sbin/mosquitto -c mosquitto.conf -v",
+    "start:server": "node server/websocket-server.js",
+    "start": "npm run start:mqtt & npm run start:server",
+    "open": "open web/esp32-led-control.html"
   },
   "keywords": [
     "iot",
     "esp32",
     "mqtt",
+    "mosquitto",
     "websocket",
     "tutorial"
   ],
   "author": "Kenneth Liu",
   "license": "MIT",
   "dependencies": {
-    "aedes": "^0.51.3",
+    "mqtt": "^5.3.5",
     "ws": "^8.18.0"
-  },
-  "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
   },
   "repository": {
     "type": "git",
