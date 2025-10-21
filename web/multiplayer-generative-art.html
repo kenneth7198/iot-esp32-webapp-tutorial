@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎨 多人生成藝術 - 協作互動</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px 40px;
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: 300;
+      letter-spacing: 3px;
+      color: #2c3e50;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 12px;
+      color: #7f8c8d;
+    }
+
+    .connection-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #e74c3c;
+      transition: background 0.3s;
+    }
+
+    .connection-dot.connected {
+      background: #2ecc71;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #artCanvas {
+      max-width: 100%;
+      max-height: 100%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px 30px;
+      border-radius: 50px;
+      box-shadow: 0 5px 30px rgba(0, 0, 0, 0.15);
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .control-btn {
+      background: none;
+      border: 2px solid #3498db;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #3498db;
+    }
+
+    .control-btn:hover {
+      background: #3498db;
+      color: white;
+    }
+
+    .control-btn.active {
+      background: #2ecc71;
+      border-color: #2ecc71;
+      color: white;
+    }
+
+    .info-panel {
+      position: fixed;
+      top: 100px;
+      right: 30px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 30px rgba(0, 0, 0, 0.15);
+      min-width: 250px;
+      font-size: 12px;
+      color: #7f8c8d;
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+
+    .info-title {
+      font-size: 14px;
+      color: #2c3e50;
+      margin-bottom: 15px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .info-item {
+      margin: 8px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .info-label {
+      opacity: 0.7;
+    }
+
+    .info-value {
+      font-weight: bold;
+      color: #3498db;
+    }
+
+    .players-section {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #ecf0f1;
+    }
+
+    .player-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      margin: 5px 0;
+      background: rgba(52, 152, 219, 0.1);
+      border-radius: 5px;
+      transition: all 0.3s;
+    }
+
+    .player-item.active {
+      background: rgba(46, 204, 113, 0.2);
+      box-shadow: 0 0 10px rgba(46, 204, 113, 0.3);
+    }
+
+    .player-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .player-name {
+      flex: 1;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .player-count {
+      font-size: 10px;
+      color: #7f8c8d;
+    }
+
+    .interaction-marker {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: markerPulse 0.5s ease-out;
+    }
+
+    @keyframes markerPulse {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(3);
+        opacity: 0;
+      }
+    }
+
+    .join-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      z-index: 200;
+    }
+
+    .join-panel.hidden {
+      display: none;
+    }
+
+    .join-panel h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    .join-panel input {
+      padding: 12px 20px;
+      border: 2px solid #ecf0f1;
+      border-radius: 8px;
+      font-size: 14px;
+      width: 100%;
+      margin-bottom: 15px;
+      transition: border-color 0.3s;
+    }
+
+    .join-panel input:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    .join-panel button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 40px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.3s;
+      width: 100%;
+    }
+
+    .join-panel button:hover {
+      background: #2980b9;
+    }
+
+    @keyframes ripple {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 加入面板 -->
+  <div class="join-panel" id="joinPanel">
+    <h2>🎨 加入多人藝術創作</h2>
+    <input type="text" id="deviceIdInput" placeholder="輸入你的設備 ID (例如: esp32-01)" />
+    <button id="joinBtn">開始創作</button>
+  </div>
+
+  <!-- 頂部標題列 -->
+  <div class="header">
+    <div class="title">MULTIPLAYER GENERATIVE ART · 多人生成藝術</div>
+    <div class="status-bar">
+      <div class="connection-dot" id="connectionDot"></div>
+      <span id="connectionText">連接中...</span>
+    </div>
+  </div>
+
+  <!-- 畫布容器 -->
+  <div class="canvas-container">
+    <canvas id="artCanvas"></canvas>
+  </div>
+
+  <!-- 資訊面板 -->
+  <div class="info-panel">
+    <div class="info-title">📊 SYSTEM INFO</div>
+    <div class="info-item">
+      <span class="info-label">Pattern:</span>
+      <span class="info-value" id="patternName">Flow Field</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Elements:</span>
+      <span class="info-value" id="elementCount">0</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">FPS:</span>
+      <span class="info-value" id="fpsCounter">60</span>
+    </div>
+    
+    <div class="players-section">
+      <div class="info-title">👥 PLAYERS (<span id="playerCount">0</span>)</div>
+      <div id="playersList"></div>
+    </div>
+  </div>
+
+  <!-- 控制面板 -->
+  <div class="controls">
+    <button class="control-btn active" data-pattern="flow">Flow Field</button>
+    <button class="control-btn" data-pattern="particle">Particle Burst</button>
+    <button class="control-btn" data-pattern="wave">Wave Sync</button>
+    <button class="control-btn" data-pattern="collaborative">Collaborative</button>
+    <button class="control-btn" id="clearBtn">Clear</button>
+  </div>
+
+  <script>
+    // ========== 設定 ==========
+    const WS_URL = 'ws://192.168.100.200:8080';
+    let myDeviceId = '';
+
+    // ========== Canvas 設定 ==========
+    const canvas = document.getElementById('artCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = window.innerWidth - 100;
+    let height = window.innerHeight - 200;
+    canvas.width = width;
+    canvas.height = height;
+
+    // ========== DOM 元素 ==========
+    const joinPanel = document.getElementById('joinPanel');
+    const deviceIdInput = document.getElementById('deviceIdInput');
+    const joinBtn = document.getElementById('joinBtn');
+    const connectionDotEl = document.getElementById('connectionDot');
+    const connectionTextEl = document.getElementById('connectionText');
+    const patternNameEl = document.getElementById('patternName');
+    const elementCountEl = document.getElementById('elementCount');
+    const fpsCounterEl = document.getElementById('fpsCounter');
+    const playerCountEl = document.getElementById('playerCount');
+    const playersListEl = document.getElementById('playersList');
+
+    // ========== 狀態 ==========
+    let ws = null;
+    let currentPattern = 'flow';
+    let particles = [];
+    let time = 0;
+    let lastFrameTime = Date.now();
+    let fps = 60;
+
+    // ========== 多人狀態 ==========
+    const players = new Map(); // deviceId -> { color, name, lastActivity, interactions }
+    const playerColors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+      '#FFB6C1', '#DDA0DD', '#F0E68C', '#B0C4DE', '#FFE4B5',
+      '#FF69B4', '#87CEEB', '#FFA500', '#32CD32', '#9370DB'
+    ];
+    let colorIndex = 0;
+
+    // ========== 色彩方案 ==========
+    const colorSchemes = {
+      pastel: ['#FFB6C1', '#B6E0FE', '#FFE4B5', '#D4A5A5', '#B5D4C3'],
+      vibrant: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'],
+      monochrome: ['#2C3E50', '#34495E', '#7F8C8D', '#95A5A6', '#BDC3C7'],
+      sunset: ['#FF6B9D', '#C06C84', '#6C5B7B', '#355C7D', '#2A9D8F']
+    };
+    let currentColors = colorSchemes.vibrant;
+
+    // ========== Flow Field 粒子類 ==========
+    class FlowParticle {
+      constructor(x, y, color) {
+        this.x = x !== undefined ? x : Math.random() * width;
+        this.y = y !== undefined ? y : Math.random() * height;
+        this.vx = 0;
+        this.vy = 0;
+        this.life = Math.random() * 100 + 100;
+        this.maxLife = this.life;
+        this.color = color || currentColors[Math.floor(Math.random() * currentColors.length)];
+        this.size = Math.random() * 2 + 1;
+      }
+
+      update() {
+        const angle = Math.sin(this.x * 0.01 + time) * Math.cos(this.y * 0.01 + time) * Math.PI * 2;
+        this.vx = Math.cos(angle) * 0.5;
+        this.vy = Math.sin(angle) * 0.5;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+
+        if (this.x < 0 || this.x > width || this.y < 0 || this.y > height || this.life <= 0) {
+          return false; // 標記為死亡
+        }
+        return true;
+      }
+
+      draw() {
+        const alpha = this.life / this.maxLife;
+        ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ========== 粒子爆炸系統 ==========
+    class ParticleExplosion {
+      constructor(x, y, color) {
+        this.particles = [];
+        this.color = color;
+        
+        for (let i = 0; i < 40; i++) {
+          const angle = (Math.PI * 2 * i) / 40;
+          const speed = Math.random() * 5 + 3;
+          this.particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 60,
+            size: Math.random() * 4 + 2
+          });
+        }
+      }
+
+      update() {
+        this.particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.98;
+          p.vy *= 0.98;
+          p.vy += 0.1; // 微重力
+          p.life--;
+        });
+        
+        this.particles = this.particles.filter(p => p.life > 0);
+      }
+
+      draw() {
+        this.particles.forEach(p => {
+          const alpha = p.life / 60;
+          ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      isDead() {
+        return this.particles.length === 0;
+      }
+    }
+
+    // ========== 協作模式：連接線 ==========
+    class ConnectionLine {
+      constructor(x1, y1, x2, y2, color1, color2) {
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+        this.color1 = color1;
+        this.color2 = color2;
+        this.life = 100;
+        this.maxLife = 100;
+      }
+
+      update() {
+        this.life--;
+        return this.life > 0;
+      }
+
+      draw() {
+        const alpha = this.life / this.maxLife;
+        const gradient = ctx.createLinearGradient(this.x1, this.y1, this.x2, this.y2);
+        gradient.addColorStop(0, this.color1 + Math.floor(alpha * 100).toString(16).padStart(2, '0'));
+        gradient.addColorStop(1, this.color2 + Math.floor(alpha * 100).toString(16).padStart(2, '0'));
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x1, this.y1);
+        ctx.lineTo(this.x2, this.y2);
+        ctx.stroke();
+      }
+    }
+
+    // ========== 初始化 ==========
+    function init() {
+      switch (currentPattern) {
+        case 'flow':
+          particles = [];
+          for (let i = 0; i < 300; i++) {
+            particles.push(new FlowParticle());
+          }
+          break;
+        case 'particle':
+        case 'wave':
+        case 'collaborative':
+          particles = [];
+          break;
+      }
+    }
+
+    // ========== 動畫循環 ==========
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      // 計算 FPS
+      const now = Date.now();
+      fps = Math.round(1000 / (now - lastFrameTime));
+      lastFrameTime = now;
+      fpsCounterEl.textContent = fps;
+      
+      // 半透明覆蓋（拖尾效果）
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fillRect(0, 0, width, height);
+      
+      time += 0.01;
+      
+      // 根據模式繪製
+      switch (currentPattern) {
+        case 'flow':
+          particles = particles.filter(p => {
+            const alive = p.update();
+            if (alive) p.draw();
+            return alive;
+          });
+          break;
+          
+        case 'particle':
+          particles = particles.filter(p => {
+            p.update();
+            p.draw();
+            return !p.isDead();
+          });
+          break;
+          
+        case 'wave':
+          drawWavePattern();
+          break;
+          
+        case 'collaborative':
+          particles = particles.filter(p => {
+            const alive = p.update();
+            if (alive) p.draw();
+            return alive;
+          });
+          break;
+      }
+      
+      elementCountEl.textContent = particles.length;
+      
+      // 更新玩家狀態
+      updatePlayersList();
+    }
+
+    // ========== Wave Pattern (多人同步) ==========
+    function drawWavePattern() {
+      const activePlayers = Array.from(players.values()).filter(p => 
+        Date.now() - p.lastActivity < 3000
+      );
+      
+      if (activePlayers.length === 0) return;
+      
+      activePlayers.forEach((player, index) => {
+        ctx.strokeStyle = player.color + '40';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        const offset = (index / activePlayers.length) * Math.PI * 2;
+        for (let x = 0; x < width; x += 5) {
+          const y = height / 2 + 
+                    Math.sin(x * 0.01 + time * 2 + offset) * 80 * 
+                    Math.cos(time + offset);
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      });
+    }
+
+    // ========== 處理玩家互動 ==========
+    function handlePlayerInteraction(deviceId, payload) {
+      // 確保玩家存在
+      if (!players.has(deviceId)) {
+        const color = playerColors[colorIndex % playerColors.length];
+        colorIndex++;
+        players.set(deviceId, {
+          color: color,
+          name: deviceId,
+          lastActivity: Date.now(),
+          interactions: 0
+        });
+      }
+
+      const player = players.get(deviceId);
+      player.lastActivity = Date.now();
+      player.interactions++;
+
+      if (!payload.pressed) return; // 只處理按下事件
+
+      // 在隨機位置創建效果
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+
+      // 視覺標記
+      createInteractionMarker(x, y, player.color);
+
+      // 根據模式創建不同效果
+      switch (currentPattern) {
+        case 'flow':
+          // 使用玩家顏色創建粒子群
+          for (let i = 0; i < 30; i++) {
+            particles.push(new FlowParticle(x, y, player.color));
+          }
+          break;
+          
+        case 'particle':
+          // 創建玩家顏色的爆炸
+          particles.push(new ParticleExplosion(x, y, player.color));
+          break;
+          
+        case 'collaborative':
+          // 協作模式：連接到其他玩家的最後互動點
+          const otherPlayers = Array.from(players.entries())
+            .filter(([id, p]) => id !== deviceId && p.lastInteractionPoint)
+            .slice(0, 3); // 最多連接3個玩家
+          
+          otherPlayers.forEach(([_, otherPlayer]) => {
+            particles.push(new ConnectionLine(
+              x, y,
+              otherPlayer.lastInteractionPoint.x,
+              otherPlayer.lastInteractionPoint.y,
+              player.color,
+              otherPlayer.color
+            ));
+          });
+          
+          // 在連接點添加粒子
+          for (let i = 0; i < 20; i++) {
+            particles.push(new FlowParticle(x, y, player.color));
+          }
+          break;
+      }
+
+      // 記錄最後互動點（用於協作模式）
+      player.lastInteractionPoint = { x, y };
+
+      console.log(`🎨 ${deviceId} 觸發互動 (${player.interactions}次)`);
+    }
+
+    // ========== 創建互動標記 ==========
+    function createInteractionMarker(x, y, color) {
+      const marker = document.createElement('div');
+      marker.className = 'interaction-marker';
+      marker.style.left = (x - 20) + 'px';
+      marker.style.top = (y - 20) + 'px';
+      marker.style.border = `3px solid ${color}`;
+      document.querySelector('.canvas-container').appendChild(marker);
+      
+      setTimeout(() => marker.remove(), 500);
+    }
+
+    // ========== 更新玩家列表 ==========
+    function updatePlayersList() {
+      const now = Date.now();
+      playersListEl.innerHTML = '';
+      playerCountEl.textContent = players.size;
+
+      players.forEach((player, deviceId) => {
+        const isActive = now - player.lastActivity < 3000;
+        const playerDiv = document.createElement('div');
+        playerDiv.className = `player-item ${isActive ? 'active' : ''}`;
+        
+        playerDiv.innerHTML = `
+          <div class="player-color" style="background: ${player.color}"></div>
+          <div class="player-name">${player.name}</div>
+          <div class="player-count">${player.interactions}</div>
+        `;
+        
+        playersListEl.appendChild(playerDiv);
+      });
+    }
+
+    // ========== WebSocket 連接 ==========
+    function connectWebSocket() {
+      ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => {
+        console.log('✅ WebSocket 連接成功');
+        connectionDotEl.classList.add('connected');
+        connectionTextEl.textContent = '已連接';
+        
+        // 訂閱所有藝術相關的按鈕主題（通配符）
+        ws.send(JSON.stringify({
+          type: 'subscribe',
+          topic: 'art/button/#'
+        }));
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.topic && data.topic.includes('art/button')) {
+            const payload = JSON.parse(data.payload);
+            // 從 topic 提取設備 ID
+            const topicParts = data.topic.split('/');
+            const deviceId = topicParts[topicParts.length - 1];
+            handlePlayerInteraction(deviceId, payload);
+          }
+        } catch (e) {
+          console.error('解析訊息失敗:', e);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        connectionTextEl.textContent = '連接錯誤';
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 WebSocket 已斷開，3 秒後重連...');
+        connectionDotEl.classList.remove('connected');
+        connectionTextEl.textContent = '已斷開';
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    // ========== 加入房間 ==========
+    joinBtn.addEventListener('click', () => {
+      myDeviceId = deviceIdInput.value.trim();
+      if (!myDeviceId) {
+        alert('請輸入設備 ID');
+        return;
+      }
+      
+      joinPanel.classList.add('hidden');
+      
+      // 初始化並連接
+      init();
+      animate();
+      connectWebSocket();
+      
+      console.log(`🎨 ${myDeviceId} 加入多人藝術創作`);
+    });
+
+    // ========== 控制按鈕事件 ==========
+    document.querySelectorAll('.control-btn[data-pattern]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.control-btn[data-pattern]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        currentPattern = btn.dataset.pattern;
+        patternNameEl.textContent = btn.textContent;
+        
+        // 清空畫布並重新初始化
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        init();
+      });
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      particles = [];
+      init();
+    });
+
+    // ========== 視窗大小調整 ==========
+    window.addEventListener('resize', () => {
+      width = window.innerWidth - 100;
+      height = window.innerHeight - 200;
+      canvas.width = width;
+      canvas.height = height;
+      init();
+    });
+
+    // ========== 測試用：滑鼠點擊模擬 ==========
+    canvas.addEventListener('click', (e) => {
+      if (!myDeviceId) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // 模擬按鈕事件
+      handlePlayerInteraction(myDeviceId, { pressed: true });
+    });
+
+    console.log('🎨 多人生成藝術系統已載入');
+  </script>
+</body>
+</html>

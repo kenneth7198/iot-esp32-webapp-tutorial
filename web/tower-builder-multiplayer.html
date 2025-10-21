@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏗️ 多人立體塔建造</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: white;
+    }
+
+    .header {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 15px 30px;
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 3px;
+      color: #00ff88;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 12px;
+      color: #888;
+    }
+
+    .connection-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ff4444;
+      transition: background 0.3s;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .connection-dot.connected {
+      background: #00ff88;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 1000px;
+    }
+
+    #towerCanvas {
+      max-width: 100%;
+      max-height: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+      border-radius: 8px;
+      cursor: grab;
+    }
+
+    #towerCanvas:active {
+      cursor: grabbing;
+    }
+
+    .info-panel {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      box-shadow: 0 5px 30px rgba(0, 255, 136, 0.2);
+      min-width: 280px;
+      font-size: 12px;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .info-title {
+      font-size: 14px;
+      color: #00ff88;
+      margin-bottom: 15px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .info-item {
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .info-label {
+      opacity: 0.7;
+    }
+
+    .info-value {
+      font-weight: bold;
+      color: #00ff88;
+      font-size: 14px;
+    }
+
+    .players-section {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 2px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .player-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      margin: 8px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .player-item.active {
+      background: rgba(0, 255, 136, 0.1);
+      border-left-color: #00ff88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+      transform: translateX(-5px);
+    }
+
+    .player-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .player-info {
+      flex: 1;
+    }
+
+    .player-name {
+      font-size: 11px;
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+
+    .player-stats {
+      font-size: 9px;
+      color: #888;
+    }
+
+    .player-blocks {
+      font-size: 16px;
+      font-weight: bold;
+      color: #00ff88;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .combo-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 80px;
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 1000;
+      text-shadow: 0 0 30px currentColor;
+      animation: comboPopup 0.6s ease-out;
+    }
+
+    @keyframes comboPopup {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+      }
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 30px;
+      border-radius: 50px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      box-shadow: 0 5px 30px rgba(0, 255, 136, 0.3);
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .control-btn {
+      background: rgba(0, 255, 136, 0.1);
+      border: 2px solid #00ff88;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #00ff88;
+    }
+
+    .control-btn:hover {
+      background: #00ff88;
+      color: #1a1a2e;
+      box-shadow: 0 0 20px #00ff88;
+    }
+
+    .join-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      padding: 40px;
+      border-radius: 15px;
+      border: 2px solid #00ff88;
+      box-shadow: 0 10px 50px rgba(0, 255, 136, 0.5);
+      text-align: center;
+      z-index: 200;
+      min-width: 400px;
+    }
+
+    .join-panel.hidden {
+      display: none;
+    }
+
+    .join-panel h2 {
+      margin-bottom: 10px;
+      color: #00ff88;
+      font-size: 28px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    .join-panel p {
+      margin-bottom: 25px;
+      color: #888;
+      font-size: 12px;
+    }
+
+    .join-panel input {
+      padding: 15px 20px;
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-radius: 8px;
+      font-size: 14px;
+      width: 100%;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      transition: all 0.3s;
+    }
+
+    .join-panel input:focus {
+      outline: none;
+      border-color: #00ff88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    }
+
+    .join-panel button {
+      background: #00ff88;
+      color: #1a1a2e;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .join-panel button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(0, 255, 136, 0.5);
+    }
+
+    .stats-overlay {
+      position: fixed;
+      top: 80px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-item {
+      margin: 10px 0;
+      font-size: 12px;
+    }
+
+    .stat-label {
+      color: #888;
+      display: inline-block;
+      width: 100px;
+    }
+
+    .stat-value {
+      color: #00ff88;
+      font-weight: bold;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- 加入面板 -->
+  <div class="join-panel" id="joinPanel">
+    <h2>🏗️ Tower Builder</h2>
+    <p>多人協作建塔遊戲 · 1024x1024 方格</p>
+    <input type="text" id="deviceIdInput" placeholder="輸入你的設備 ID (例如: esp32-01)" />
+    <button id="joinBtn">開始建造</button>
+  </div>
+
+  <!-- 頂部標題列 -->
+  <div class="header">
+    <div class="title">🏗️ TOWER BUILDER · 連擊堆疊</div>
+    <div class="status-bar">
+      <div class="connection-dot" id="connectionDot"></div>
+      <span id="connectionText">連接中...</span>
+    </div>
+  </div>
+
+  <!-- 統計資訊 -->
+  <div class="stats-overlay">
+    <div class="info-title">📊 塔狀態</div>
+    <div class="stat-item">
+      <span class="stat-label">總方塊:</span>
+      <span class="stat-value" id="totalBlocks">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">塔高度:</span>
+      <span class="stat-value" id="towerHeight">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">完成度:</span>
+      <span class="stat-value" id="completion">0%</span>
+    </div>
+  </div>
+
+  <!-- 畫布容器 -->
+  <div class="canvas-container">
+    <canvas id="towerCanvas"></canvas>
+  </div>
+
+  <!-- 玩家資訊面板 -->
+  <div class="info-panel">
+    <div class="info-title">👥 玩家 (<span id="playerCount">0</span>)</div>
+    <div id="playersList"></div>
+  </div>
+
+  <!-- 控制面板 -->
+  <div class="controls">
+    <button class="control-btn" id="resetBtn">重置塔</button>
+    <button class="control-btn" id="rotateBtn">旋轉視角</button>
+    <button class="control-btn" id="topViewBtn">俯視圖</button>
+  </div>
+
+  <script>
+    // ========== 設定 ==========
+    const WS_URL = 'ws://192.168.100.200:8080';
+    const GRID_SIZE = 1024; // 1024x1024 方格
+    const MAX_HEIGHT = 100; // 最大高度
+    const COMBO_TIMEOUT = 1000; // 連擊超時時間 (ms)
+    let myDeviceId = '';
+
+    // ========== Canvas 設定 ==========
+    const canvas = document.getElementById('towerCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800;
+    canvas.height = 800;
+
+    // ========== DOM 元素 ==========
+    const joinPanel = document.getElementById('joinPanel');
+    const deviceIdInput = document.getElementById('deviceIdInput');
+    const joinBtn = document.getElementById('joinBtn');
+    const connectionDotEl = document.getElementById('connectionDot');
+    const connectionTextEl = document.getElementById('connectionText');
+    const playerCountEl = document.getElementById('playerCount');
+    const playersListEl = document.getElementById('playersList');
+    const totalBlocksEl = document.getElementById('totalBlocks');
+    const towerHeightEl = document.getElementById('towerHeight');
+    const completionEl = document.getElementById('completion');
+
+    // ========== 狀態 ==========
+    let ws = null;
+    let tower = []; // 3D 陣列 [x][y][z]
+    let totalBlocks = 0;
+    let maxHeight = 0;
+
+    // ========== 視角控制 ==========
+    let rotationX = 30; // X軸旋轉角度
+    let rotationZ = 45; // Z軸旋轉角度
+    let zoom = 0.5;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    // ========== 玩家狀態 ==========
+    const players = new Map();
+    const playerColors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+      '#FFB6C1', '#DDA0DD', '#F0E68C', '#B0C4DE', '#FFE4B5',
+      '#FF69B4', '#87CEEB', '#FFA500', '#32CD32', '#9370DB',
+      '#FF1493', '#00CED1', '#FFD700', '#ADFF2F', '#FF4500'
+    ];
+    let colorIndex = 0;
+
+    // 玩家連擊狀態
+    const playerCombos = new Map(); // deviceId -> { combo, lastTime, blocks }
+
+    // ========== 初始化塔 ==========
+    function initTower() {
+      tower = [];
+      for (let x = 0; x < GRID_SIZE; x++) {
+        tower[x] = [];
+        for (let y = 0; y < GRID_SIZE; y++) {
+          tower[x][y] = [];
+        }
+      }
+      totalBlocks = 0;
+      maxHeight = 0;
+      updateStats();
+    }
+
+    // ========== 添加方塊 ==========
+    function addBlock(deviceId, color) {
+      // 隨機選擇位置
+      const x = Math.floor(Math.random() * GRID_SIZE);
+      const y = Math.floor(Math.random() * GRID_SIZE);
+      
+      // 找到該位置的當前高度
+      let z = tower[x][y].length;
+      
+      if (z >= MAX_HEIGHT) {
+        // 已達最大高度，隨機找另一個位置
+        return addBlock(deviceId, color);
+      }
+
+      // 添加方塊
+      tower[x][y].push({
+        color: color,
+        deviceId: deviceId,
+        timestamp: Date.now()
+      });
+
+      totalBlocks++;
+      if (z + 1 > maxHeight) {
+        maxHeight = z + 1;
+      }
+
+      updateStats();
+      
+      return { x, y, z };
+    }
+
+    // ========== 處理玩家按鈕事件 ==========
+    function handlePlayerButton(deviceId, payload) {
+      if (!payload.pressed) return; // 只處理按下事件
+
+      const now = Date.now();
+
+      // 確保玩家存在
+      if (!players.has(deviceId)) {
+        const color = playerColors[colorIndex % playerColors.length];
+        colorIndex++;
+        players.set(deviceId, {
+          color: color,
+          name: deviceId,
+          totalBlocks: 0,
+          maxCombo: 0,
+          lastActivity: now
+        });
+      }
+
+      const player = players.get(deviceId);
+      player.lastActivity = now;
+
+      // 處理連擊
+      if (!playerCombos.has(deviceId)) {
+        playerCombos.set(deviceId, {
+          combo: 0,
+          lastTime: 0,
+          blocks: []
+        });
+      }
+
+      const comboData = playerCombos.get(deviceId);
+      
+      // 檢查是否在連擊超時內
+      if (now - comboData.lastTime < COMBO_TIMEOUT) {
+        comboData.combo++;
+      } else {
+        comboData.combo = 1;
+        comboData.blocks = [];
+      }
+      
+      comboData.lastTime = now;
+
+      // 根據連擊數添加方塊
+      const blocksToAdd = comboData.combo;
+      for (let i = 0; i < blocksToAdd; i++) {
+        const block = addBlock(deviceId, player.color);
+        if (block) {
+          comboData.blocks.push(block);
+        }
+      }
+
+      player.totalBlocks += blocksToAdd;
+      if (comboData.combo > player.maxCombo) {
+        player.maxCombo = comboData.combo;
+      }
+
+      // 顯示連擊提示
+      if (comboData.combo > 1) {
+        showComboIndicator(comboData.combo, player.color);
+      }
+
+      console.log(`🏗️ ${deviceId} - Combo x${comboData.combo} (+${blocksToAdd} 方塊)`);
+
+      updatePlayersList();
+    }
+
+    // ========== 顯示連擊指示器 ==========
+    function showComboIndicator(combo, color) {
+      const indicator = document.createElement('div');
+      indicator.className = 'combo-indicator';
+      indicator.textContent = `×${combo} COMBO!`;
+      indicator.style.color = color;
+      document.body.appendChild(indicator);
+      
+      setTimeout(() => indicator.remove(), 600);
+    }
+
+    // ========== 3D 投影轉換 ==========
+    function project3D(x, y, z) {
+      // 正規化座標 (0-1)
+      const nx = x / GRID_SIZE;
+      const ny = y / GRID_SIZE;
+      const nz = z / MAX_HEIGHT;
+
+      // 中心化
+      const cx = nx - 0.5;
+      const cy = ny - 0.5;
+      const cz = nz;
+
+      // 旋轉變換
+      const radX = rotationX * Math.PI / 180;
+      const radZ = rotationZ * Math.PI / 180;
+
+      // 繞 Z 軸旋轉
+      let x1 = cx * Math.cos(radZ) - cy * Math.sin(radZ);
+      let y1 = cx * Math.sin(radZ) + cy * Math.cos(radZ);
+      let z1 = cz;
+
+      // 繞 X 軸旋轉
+      let y2 = y1 * Math.cos(radX) - z1 * Math.sin(radX);
+      let z2 = y1 * Math.sin(radX) + z1 * Math.cos(radX);
+      let x2 = x1;
+
+      // 透視投影
+      const perspective = 2;
+      const scale = zoom * canvas.width * 0.8;
+      const factor = perspective / (perspective + z2);
+
+      return {
+        x: canvas.width / 2 + x2 * scale * factor,
+        y: canvas.height / 2 + y2 * scale * factor,
+        z: z2
+      };
+    }
+
+    // ========== 繪製塔 ==========
+    function drawTower() {
+      ctx.fillStyle = '#0a0a15';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 收集所有要繪製的方塊
+      const blocks = [];
+      
+      // 採樣策略：根據 zoom 決定採樣率
+      const sampleRate = Math.max(1, Math.floor(GRID_SIZE / 200 / zoom));
+      
+      for (let x = 0; x < GRID_SIZE; x += sampleRate) {
+        for (let y = 0; y < GRID_SIZE; y += sampleRate) {
+          const height = tower[x][y].length;
+          if (height > 0) {
+            for (let z = 0; z < height; z++) {
+              const block = tower[x][y][z];
+              const proj = project3D(x, y, z);
+              blocks.push({
+                x: x,
+                y: y,
+                z: z,
+                proj: proj,
+                color: block.color
+              });
+            }
+          }
+        }
+      }
+
+      // 按照 z 深度排序（遠到近）
+      blocks.sort((a, b) => a.proj.z - b.proj.z);
+
+      // 繪製方塊
+      blocks.forEach(block => {
+        const size = 2 * zoom;
+        const brightness = (block.proj.z + 1) / 2; // 0-1
+        
+        ctx.fillStyle = block.color;
+        ctx.globalAlpha = 0.6 + brightness * 0.4;
+        
+        ctx.fillRect(
+          block.proj.x - size / 2,
+          block.proj.y - size / 2,
+          size,
+          size
+        );
+      });
+
+      ctx.globalAlpha = 1;
+
+      // 繪製網格底部
+      drawGrid();
+    }
+
+    // ========== 繪製網格 ==========
+    function drawGrid() {
+      ctx.strokeStyle = 'rgba(0, 255, 136, 0.2)';
+      ctx.lineWidth = 1;
+
+      const gridStep = GRID_SIZE / 10;
+      for (let i = 0; i <= 10; i++) {
+        const pos = i * gridStep;
+        
+        // X 方向線
+        const p1 = project3D(pos, 0, 0);
+        const p2 = project3D(pos, GRID_SIZE, 0);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+
+        // Y 方向線
+        const p3 = project3D(0, pos, 0);
+        const p4 = project3D(GRID_SIZE, pos, 0);
+        ctx.beginPath();
+        ctx.moveTo(p3.x, p3.y);
+        ctx.lineTo(p4.x, p4.y);
+        ctx.stroke();
+      }
+    }
+
+    // ========== 動畫循環 ==========
+    function animate() {
+      drawTower();
+      requestAnimationFrame(animate);
+    }
+
+    // ========== 更新統計 ==========
+    function updateStats() {
+      totalBlocksEl.textContent = totalBlocks.toLocaleString();
+      towerHeightEl.textContent = maxHeight;
+      const completion = ((totalBlocks / (GRID_SIZE * GRID_SIZE * MAX_HEIGHT)) * 100).toFixed(2);
+      completionEl.textContent = completion + '%';
+    }
+
+    // ========== 更新玩家列表 ==========
+    function updatePlayersList() {
+      const now = Date.now();
+      playersListEl.innerHTML = '';
+      playerCountEl.textContent = players.size;
+
+      // 按照方塊數排序
+      const sortedPlayers = Array.from(players.entries())
+        .sort((a, b) => b[1].totalBlocks - a[1].totalBlocks);
+
+      sortedPlayers.forEach(([deviceId, player]) => {
+        const isActive = now - player.lastActivity < 3000;
+        const comboData = playerCombos.get(deviceId);
+        const currentCombo = comboData && (now - comboData.lastTime < COMBO_TIMEOUT) 
+          ? comboData.combo 
+          : 0;
+
+        const playerDiv = document.createElement('div');
+        playerDiv.className = `player-item ${isActive ? 'active' : ''}`;
+        
+        playerDiv.innerHTML = `
+          <div class="player-color" style="background: ${player.color}"></div>
+          <div class="player-info">
+            <div class="player-name">${player.name}</div>
+            <div class="player-stats">
+              最高連擊: ${player.maxCombo} 
+              ${currentCombo > 0 ? `| 🔥 ×${currentCombo}` : ''}
+            </div>
+          </div>
+          <div class="player-blocks">${player.totalBlocks}</div>
+        `;
+        
+        playersListEl.appendChild(playerDiv);
+      });
+    }
+
+    // ========== 滑鼠控制 ==========
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      const deltaX = e.clientX - lastMouseX;
+      const deltaY = e.clientY - lastMouseY;
+
+      rotationZ += deltaX * 0.5;
+      rotationX -= deltaY * 0.5;
+
+      // 限制 X 旋轉角度
+      rotationX = Math.max(-89, Math.min(89, rotationX));
+
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      zoom *= (1 - e.deltaY * 0.001);
+      zoom = Math.max(0.1, Math.min(2, zoom));
+    });
+
+    // ========== 控制按鈕 ==========
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (confirm('確定要重置整座塔嗎？')) {
+        initTower();
+        players.clear();
+        playerCombos.clear();
+        updatePlayersList();
+      }
+    });
+
+    document.getElementById('rotateBtn').addEventListener('click', () => {
+      // 自動旋轉動畫
+      let startTime = Date.now();
+      const duration = 3000;
+      const startRotation = rotationZ;
+
+      function autoRotate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        rotationZ = startRotation + progress * 360;
+        
+        if (progress < 1) {
+          requestAnimationFrame(autoRotate);
+        }
+      }
+      autoRotate();
+    });
+
+    document.getElementById('topViewBtn').addEventListener('click', () => {
+      rotationX = 89;
+      rotationZ = 0;
+    });
+
+    // ========== WebSocket 連接 ==========
+    function connectWebSocket() {
+      ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => {
+        console.log('✅ WebSocket 連接成功');
+        connectionDotEl.classList.add('connected');
+        connectionTextEl.textContent = '已連接';
+        
+        // 訂閱所有塔相關的按鈕主題
+        ws.send(JSON.stringify({
+          type: 'subscribe',
+          topic: 'tower/button/#'
+        }));
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.topic && data.topic.includes('tower/button')) {
+            const payload = JSON.parse(data.payload);
+            const topicParts = data.topic.split('/');
+            const deviceId = topicParts[topicParts.length - 1];
+            handlePlayerButton(deviceId, payload);
+          }
+        } catch (e) {
+          console.error('解析訊息失敗:', e);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        connectionTextEl.textContent = '連接錯誤';
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 WebSocket 已斷開，3 秒後重連...');
+        connectionDotEl.classList.remove('connected');
+        connectionTextEl.textContent = '已斷開';
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    // ========== 加入遊戲 ==========
+    joinBtn.addEventListener('click', () => {
+      myDeviceId = deviceIdInput.value.trim();
+      if (!myDeviceId) {
+        alert('請輸入設備 ID');
+        return;
+      }
+      
+      joinPanel.classList.add('hidden');
+      
+      // 初始化並啟動
+      initTower();
+      animate();
+      connectWebSocket();
+      
+      console.log(`🏗️ ${myDeviceId} 加入塔建造遊戲`);
+    });
+
+    // ========== 測試：鍵盤快捷鍵 ==========
+    document.addEventListener('keydown', (e) => {
+      if (!myDeviceId) return;
+      
+      if (e.code === 'Space') {
+        // 模擬按鈕按下
+        handlePlayerButton(myDeviceId, { pressed: true });
+      }
+    });
+
+    console.log('🏗️ 塔建造系統已載入');
+    console.log('提示: 按住空白鍵可以模擬按鈕連擊測試');
+  </script>
+</body>
+</html>

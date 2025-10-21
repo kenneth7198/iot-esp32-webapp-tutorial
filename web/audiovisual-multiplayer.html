@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎨🎵 Audiovisual Multiplayer Art</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/addons/p5.sound.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000;
+      overflow: hidden;
+      color: white;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .title {
+      font-size: 18px;
+      letter-spacing: 3px;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    }
+
+    .status {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .connection-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff4444;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .connection-dot.connected {
+      background: #00ff88;
+    }
+
+    .players-panel {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 100;
+      min-width: 250px;
+      max-height: 70vh;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-title {
+      font-size: 12px;
+      color: #00ff88;
+      margin-bottom: 15px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .player-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+      border-left: 3px solid transparent;
+      transition: all 0.3s;
+      font-size: 11px;
+    }
+
+    .player-item.active {
+      background: rgba(255, 255, 255, 0.1);
+      border-left-color: #00ff88;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    }
+
+    .player-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .player-name {
+      flex: 1;
+      font-weight: bold;
+    }
+
+    .join-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      padding: 40px;
+      border-radius: 15px;
+      border: 2px solid #00ff88;
+      box-shadow: 0 0 50px rgba(0, 255, 136, 0.5);
+      text-align: center;
+      z-index: 200;
+      min-width: 400px;
+    }
+
+    .join-panel.hidden {
+      display: none;
+    }
+
+    .join-panel h2 {
+      margin-bottom: 10px;
+      color: #00ff88;
+      font-size: 28px;
+      letter-spacing: 3px;
+    }
+
+    .join-panel p {
+      margin-bottom: 25px;
+      color: #888;
+      font-size: 12px;
+    }
+
+    .join-panel input {
+      padding: 15px 20px;
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-radius: 8px;
+      font-size: 14px;
+      width: 100%;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+    }
+
+    .join-panel button {
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      letter-spacing: 2px;
+    }
+
+    .mode-info {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      min-width: 200px;
+    }
+
+    .mode-info .label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .mode-info .value {
+      font-size: 16px;
+      color: #00ff88;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+    
+    .control-btn {
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid #00ff88;
+      padding: 8px 15px;
+      border-radius: 5px;
+      color: #00ff88;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .control-btn:hover {
+      background: #00ff88;
+      color: #000;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+    }
+    
+    .control-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .help-info {
+      position: fixed;
+      bottom: 20px;
+      right: 280px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      font-size: 10px;
+      color: #888;
+    }
+    
+    .help-info kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #00ff88;
+      font-family: 'Courier New', monospace;
+      margin: 0 3px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Join Panel -->
+  <div class="join-panel" id="joinPanel">
+    <h2>🎨🎵 AUDIOVISUAL</h2>
+    <p>多人互動聲音視覺藝術</p>
+    <p style="font-size: 12px; color: #00ff88; margin: 10px 0;">💡 提示:點擊畫面任何地方即可聽到鋼琴聲音</p>
+    <button id="testSoundBtn" style="margin: 10px 0; padding: 10px 20px; background: #00ff88; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">🔊 測試聲音</button>
+    <input type="text" id="deviceIdInput" placeholder="輸入你的設備 ID" />
+    <button id="joinBtn">開始體驗</button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title">🎨🎵 AUDIOVISUAL MULTIPLAYER ART</div>
+    <div class="status">
+      <div class="connection-dot" id="connectionDot"></div>
+      <span id="connectionText">連接中...</span>
+    </div>
+  </div>
+
+  <!-- Players Panel -->
+  <div class="players-panel">
+    <div class="panel-title">👥 Players (<span id="playerCount">0</span>)</div>
+    <div id="playersList"></div>
+  </div>
+
+  <!-- Mode Info -->
+  <div class="mode-info">
+    <div class="label">Current Mode</div>
+    <div class="value" id="currentMode">Flow Field</div>
+    <div style="margin-top: 10px;">
+      <button class="control-btn" id="nextModeBtn" style="width: 100%; padding: 8px; background: rgba(0, 255, 136, 0.2); border: 1px solid #00ff88; border-radius: 5px; color: #00ff88; cursor: pointer;">
+        Next Mode
+      </button>
+    </div>
+  </div>
+  
+  <!-- Help Info -->
+  <div class="help-info">
+    <div><kbd>SPACE</kbd> 切換模式</div>
+    <div><kbd>S</kbd> 儲存截圖</div>
+    <div><kbd>CLICK</kbd> 觸發音效</div>
+  </div>
+
+  <!-- Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <script>
+    // ========== 設定 ==========
+    const WS_URL = 'ws://192.168.100.200:8080';
+    let myDeviceId = '';
+    let ws = null;
+
+    // ========== 玩家管理 ==========
+    const players = new Map();
+    const playerColors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+      '#FFB6C1', '#DDA0DD', '#F0E68C', '#B0C4DE', '#FFE4B5',
+      '#FF69B4', '#87CEEB', '#FFA500', '#32CD32', '#9370DB'
+    ];
+    let colorIndex = 0;
+
+    // ========== 音訊設定 ==========
+    let audioContext;
+    let masterGain;
+    let synths = new Map(); // deviceId -> synth objects
+
+    // ========== p5.js 全域變數 ==========
+    let particles = [];
+    let currentMode = '3dheart';
+    let modes = ['3dheart', 'symmetry', 'neurons', 'shader']; // 移除 'particles'
+    let modeIndex = 0;
+    let time = 0;
+    let rotationSpeed = 0.01;
+    let seed;
+    let rez = 0;
+    let palette = [];
+    let mySize;
+    
+    // 神經網路變數
+    let neurons = [];
+    let connections = [];
+    let numNeurons = 100;
+    
+    // Shader 變數
+    let theShader;
+    let shaderGraphics;
+    
+    // Particles 爆炸效果變數
+    let parNum = 1000;
+    let color_vision;
+
+    // ========== p5.js Setup ==========
+    function setup() {
+      mySize = min(windowWidth, windowHeight) * 0.9;
+      createCanvas(windowWidth, windowHeight, WEBGL);
+      colorMode(HSB, 360, 100, 100, 100);
+      
+      // 設定隨機種子
+      seed = Math.random() * Math.pow(Math.pow(int(TWO_PI), 3), 2);
+      randomSeed(seed);
+      
+      // 初始化調色盤
+      const colorSchemes = [
+        ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'],
+        ['#FFB6C1', '#DDA0DD', '#F0E68C', '#B0C4DE', '#FFE4B5'],
+        ['#FF69B4', '#87CEEB', '#FFA500', '#32CD32', '#9370DB']
+      ];
+      palette = random(colorSchemes);
+      
+      // 初始化音訊
+      initAudio();
+      
+      // 設定 3D 透視
+      perspective(0.5, width / height, 5, 10000);
+      
+      // 初始化神經網路
+      initNeurons();
+      
+      // 初始化 Shader
+      initShader();
+      
+      // 初始化粒子爆炸效果
+      initParticles();
+      
+      frameRate(50);
+      time = rez = 0;
+    }
+    
+    // ========== 初始化 Shader (SamuelYAN Style) ==========
+    function initShader() {
+      // Vertex shader - 標準頂點著色器
+      const vert = `
+        attribute vec3 aPosition;
+        attribute vec2 aTexCoord;
+        varying vec2 vTexCoord;
+        
+        void main() {
+          vTexCoord = aTexCoord;
+          vec4 positionVec4 = vec4(aPosition, 1.0);
+          positionVec4.xy = positionVec4.xy * 2.0 - 1.0;
+          gl_Position = positionVec4;
+        }
+      `;
+      
+      // Fragment shader - SamuelYAN 風格的生成藝術
+      const frag = `
+        precision highp float;
+        
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform float u_frame;
+        uniform vec2 u_mouse;
+        
+        varying vec2 vTexCoord;
+        
+        // 雜訊函數
+        float random(vec2 st) {
+          return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+        }
+        
+        // 2D 旋轉矩陣
+        mat2 rotate2d(float angle) {
+          return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+        }
+        
+        // 分形布朗運動 (FBM)
+        float noise(vec2 st) {
+          vec2 i = floor(st);
+          vec2 f = fract(st);
+          float a = random(i);
+          float b = random(i + vec2(1.0, 0.0));
+          float c = random(i + vec2(0.0, 1.0));
+          float d = random(i + vec2(1.0, 1.0));
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+        
+        float fbm(vec2 st) {
+          float value = 0.0;
+          float amplitude = 0.5;
+          float frequency = 0.0;
+          for (int i = 0; i < 6; i++) {
+            value += amplitude * noise(st);
+            st *= 2.0;
+            amplitude *= 0.5;
+          }
+          return value;
+        }
+        
+        void main() {
+          vec2 st = vTexCoord;
+          st.y = 1.0 - st.y; // 翻轉 Y 軸
+          
+          // 正規化座標
+          vec2 uv = st * 2.0 - 1.0;
+          uv.x *= u_resolution.x / u_resolution.y;
+          
+          // 時間變數
+          float t = u_time * 0.3;
+          
+          // 滑鼠互動
+          vec2 mouse = u_mouse * 0.1;
+          
+          // 創建多層旋轉和扭曲效果
+          vec2 p = uv;
+          p = rotate2d(t * 0.1) * p;
+          
+          // 添加滑鼠影響
+          float mouseInfluence = length(uv - mouse) * 2.0;
+          p += mouse * 0.3;
+          
+          // 多層次的 FBM 噪聲
+          float n1 = fbm(p * 3.0 + t);
+          float n2 = fbm(p * 5.0 - t * 0.5 + n1);
+          float n3 = fbm(p * 7.0 + t * 0.3 + n2);
+          
+          // 創建流體般的圖案
+          float pattern = sin(p.x * 10.0 + n1 * 5.0 + t) * 
+                         cos(p.y * 10.0 + n2 * 5.0 - t) * 
+                         sin(length(p) * 5.0 + n3 * 3.0);
+          
+          // 添加螺旋效果
+          float angle = atan(p.y, p.x);
+          float radius = length(p);
+          float spiral = sin(angle * 8.0 + radius * 10.0 - t * 2.0 + n1 * 3.0);
+          
+          // 組合效果
+          float combined = (pattern + spiral) * 0.5;
+          combined = smoothstep(-0.5, 0.5, combined);
+          
+          // 添加脈衝效果
+          float pulse = sin(t * 2.0) * 0.5 + 0.5;
+          combined += pulse * 0.2 * sin(radius * 20.0 - t * 3.0);
+          
+          // 顏色映射 - 優雅的漸變配色方案
+          vec3 color1 = vec3(0.4, 0.2, 0.8);  // 深紫色
+          vec3 color2 = vec3(0.2, 0.6, 1.0);  // 天藍色
+          vec3 color3 = vec3(1.0, 0.4, 0.6);  // 珊瑚粉
+          vec3 color4 = vec3(0.3, 0.8, 0.9);  // 青綠色
+          
+          // 根據不同的噪聲值混合顏色
+          vec3 finalColor = mix(color1, color2, smoothstep(0.0, 1.0, n1));
+          finalColor = mix(finalColor, color3, smoothstep(0.3, 0.7, n2));
+          finalColor = mix(finalColor, color4, smoothstep(0.4, 0.6, combined));
+          
+          // 添加柔和的發光效果
+          float glow = 1.0 - length(uv) * 0.4;
+          glow = pow(glow, 2.0);
+          finalColor += vec3(0.15, 0.1, 0.2) * glow;
+          
+          // 添加邊緣暈影
+          float vignette = 1.0 - length(uv) * 0.6;
+          vignette = smoothstep(0.0, 1.0, vignette);
+          finalColor *= vignette;
+          
+          // 整體亮度調整
+          finalColor = pow(finalColor, vec3(1.2)); // 稍微提亮
+          
+          gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `;
+      
+      // 創建 shader
+      theShader = createShader(vert, frag);
+    }
+    
+    // ========== 初始化神經網路 ==========
+    function initNeurons() {
+      neurons = [];
+      connections = [];
+      
+      // 創建初始神經元
+      for (let i = 0; i < numNeurons; i++) {
+        neurons.push(new Neuron(random(-width/2, width/2), random(-height/2, height/2)));
+      }
+      
+      // 創建初始連接
+      for (let i = 0; i < numNeurons; i++) {
+        let neuron = neurons[i];
+        for (let j = 0; j < numNeurons; j++) {
+          if (i !== j && random() < 0.05) {
+            connections.push(new Synapse(neuron, neurons[j]));
+          }
+        }
+      }
+    }
+
+    // ========== 初始化粒子煙火效果 ==========
+    function initParticles() {
+      particles = [];
+      seed = Math.random() * 1000;
+      randomSeed(seed);
+      color_vision = random([1, 2, 3, 4, 5]);
+      
+      // 減少初始粒子數量,讓煙火更清晰
+      let initialCount = 15; // 從 1000 減少到 15
+      for (let i = 0; i < initialCount; i++) {
+        particles.push(new Particle(
+          random(width * 0.3, width * 0.7),
+          height - 50
+        ));
+      }
+    }
+
+    // ========== p5.js Draw ==========
+    function draw() {
+      background(0, 0, 0, 10);
+      time += 0.01;
+      
+      switch(currentMode) {
+        case '3dheart':
+          draw3DHeartPattern();
+          break;
+        case 'symmetry':
+          drawSymmetryPattern();
+          break;
+        case 'neurons':
+          drawNeuronsPattern();
+          break;
+        case 'shader':
+          drawShaderPattern();
+          break;
+      }
+    }
+    
+    // ========== 視覺模式 3: Neural Network ==========
+    function drawNeuronsPattern() {
+      // 神經網路使用 2D 模式
+      push();
+      
+      // 繪製連接
+      for (let synapse of connections) {
+        synapse.display();
+      }
+      
+      // 更新和繪製神經元
+      for (let neuron of neurons) {
+        neuron.update();
+        neuron.display();
+      }
+      
+      // 隨機發火
+      for (let neuron of neurons) {
+        if (random() < 0.01) {
+          neuron.fire();
+        }
+      }
+      
+      pop();
+    }
+    
+    // ========== Neuron Class (神經元) ==========
+    class Neuron {
+      constructor(x, y) {
+        this.position = createVector(x, y);
+        this.fireRate = 0;  // 發火強度
+        this.baseColor = color(random(palette));
+        this.hueValue = hue(this.baseColor);
+      }
+
+      // 發火
+      fire() {
+        this.fireRate = 255; // 最大強度發火
+        setTimeout(() => {
+          this.fireRate = 0; // 發火後恢復
+        }, 100);
+      }
+
+      update() {
+        // 發火中通過突觸傳送信號
+        if (this.fireRate > 0) {
+          for (let synapse of connections) {
+            if (synapse.inputNeuron === this) {
+              synapse.transmit();
+            }
+          }
+        }
+      }
+
+      // 繪製神經元
+      display() {
+        push();
+        translate(this.position.x, this.position.y, 0);
+        
+        // 發光效果
+        if (this.fireRate > 0) {
+          noStroke();
+          fill(this.hueValue, 80, 100, this.fireRate * 0.3);
+          circle(0, 0, 40);
+        }
+        
+        stroke(0, 0, 100);
+        fill(this.hueValue, 80, 100, this.fireRate);
+        circle(0, 0, 20);
+        pop();
+      }
+    }
+
+    // ========== Synapse Class (突觸) ==========
+    class Synapse {
+      constructor(inputNeuron, outputNeuron) {
+        this.inputNeuron = inputNeuron;
+        this.outputNeuron = outputNeuron;
+        this.transmission = false;
+        this.oscillator = null;
+      }
+
+      // 傳送信號
+      transmit() {
+        if (!this.transmission) {
+          this.transmission = true;
+          
+          // 生成隨機頻率 (100 Hz ~ 800 Hz)
+          let freq = random(100, 800);
+          
+          // 創建振盪器
+          if (audioContext && audioContext.state === 'running') {
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gainNode.gain.value = 0.02; // 輕柔的音量
+            
+            osc.connect(gainNode);
+            gainNode.connect(masterGain);
+            
+            osc.start();
+            
+            // 快速淡出
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+            osc.stop(audioContext.currentTime + 0.1);
+          }
+          
+          // 觸發輸出神經元發火
+          setTimeout(() => {
+            this.outputNeuron.fire();
+          }, 50);
+          
+          // 傳送結束
+          setTimeout(() => {
+            this.transmission = false;
+          }, 100);
+        }
+      }
+
+      // 繪製突觸
+      display() {
+        push();
+        if (this.transmission) {
+          stroke(120, 100, 100, 150); // 傳送中為綠色
+          strokeWeight(2);
+        } else {
+          stroke(0, 0, 100, 30); // 靜止時為白色半透明
+          strokeWeight(1);
+        }
+        line(this.inputNeuron.position.x, this.inputNeuron.position.y, 0,
+             this.outputNeuron.position.x, this.outputNeuron.position.y, 0);
+        pop();
+      }
+    }
+    
+    // ========== Particle Class (煙火粒子) ==========
+    class Particle {
+      constructor(x, y) {
+        this.pos = createVector(x, y);
+        this.vel = createVector(random(-0.5, 0.5), random(-15, -12)); // 更快向上發射
+        this.acc = createVector(0, 0.3); // 重力
+        this.alpha = 255;
+        this.alpha2 = 255;
+        this.size = random(4, 7);
+        this.color_vision = color_vision;
+        this.particles = [];
+        this.exploded = false;
+        this.trail = []; // 拖尾軌跡
+      }
+
+      update() {
+        // 保存軌跡
+        if (frameCount % 2 === 0) {
+          this.trail.push(this.pos.copy());
+          if (this.trail.length > 10) {
+            this.trail.shift();
+          }
+        }
+        
+        this.vel.add(this.acc);
+        this.pos.add(this.vel);
+        this.alpha -= 1.5;
+        this.alpha2 -= 1;
+      }
+
+      show() {
+        push();
+        
+        // 根據 color_vision 選擇鮮豔的煙火顏色
+        let c;
+        switch(this.color_vision) {
+          case 1:
+            // 亮紫色
+            c = color(200, 100, 255, this.alpha);
+            break;
+          case 2:
+            // 亮藍色
+            c = color(50, 150, 255, this.alpha);
+            break;
+          case 3:
+            // 亮綠色
+            c = color(50, 255, 150, this.alpha);
+            break;
+          case 4:
+            // 亮粉色
+            c = color(255, 100, 150, this.alpha);
+            break;
+          case 5:
+            // 金黃色
+            c = color(255, 200, 50, this.alpha);
+            break;
+          default:
+            c = color(255, 255, 255, this.alpha);
+        }
+        
+        // 繪製拖尾
+        noFill();
+        stroke(red(c), green(c), blue(c), this.alpha * 0.5);
+        strokeWeight(2);
+        beginShape();
+        for (let i = 0; i < this.trail.length; i++) {
+          let t = this.trail[i];
+          let trailAlpha = map(i, 0, this.trail.length, 0, this.alpha * 0.5);
+          stroke(red(c), green(c), blue(c), trailAlpha);
+          vertex(t.x, t.y);
+        }
+        endShape();
+        
+        // 繪製主粒子 - 強烈發光
+        noStroke();
+        for (let i = 5; i > 0; i--) {
+          let glowAlpha = this.alpha * 0.3 / i;
+          fill(red(c), green(c), blue(c), glowAlpha);
+          ellipse(this.pos.x, this.pos.y, this.size * (1 + i * 0.5), this.size * (1 + i * 0.5));
+        }
+        
+        fill(255, 255, 255, this.alpha); // 白色核心
+        ellipse(this.pos.x, this.pos.y, this.size * 0.5, this.size * 0.5);
+        
+        // 繪製爆炸的子粒子
+        for (let p of this.particles) {
+          p.update();
+          p.show();
+        }
+        
+        pop();
+      }
+
+      explode() {
+        if (!this.exploded) {
+          this.exploded = true;
+          // 創建更多子粒子形成圓形爆炸
+          let numParticles = 30; // 增加到 30 個
+          for (let i = 0; i < numParticles; i++) {
+            let angle = (TWO_PI / numParticles) * i;
+            let vel = p5.Vector.fromAngle(angle);
+            vel.mult(random(2, 5)); // 更快的爆炸速度
+            this.particles.push(new SubParticle(this.pos.x, this.pos.y, vel, this.color_vision));
+          }
+          
+          // 添加一些隨機方向的粒子
+          for (let i = 0; i < 10; i++) {
+            let angle = random(TWO_PI);
+            let vel = p5.Vector.fromAngle(angle);
+            vel.mult(random(1, 4));
+            this.particles.push(new SubParticle(this.pos.x, this.pos.y, vel, this.color_vision));
+          }
+        }
+      }
+
+      finished() {
+        return this.alpha < 0;
+      }
+    }
+
+    // ========== SubParticle Class (子粒子) ==========
+    class SubParticle {
+      constructor(x, y, vel, colorVision) {
+        this.pos = createVector(x, y);
+        this.vel = vel;
+        this.acc = createVector(0, 0.15); // 稍微增加重力
+        this.alpha = 255;
+        this.size = random(2, 5);
+        this.color_vision = colorVision;
+        this.life = 255;
+      }
+
+      update() {
+        this.vel.add(this.acc);
+        this.vel.mult(0.98); // 空氣阻力
+        this.pos.add(this.vel);
+        this.alpha -= 3;
+        this.life -= 3;
+      }
+
+      show() {
+        push();
+        noStroke();
+        
+        // 使用鮮豔的煙火顏色
+        let c;
+        switch(this.color_vision) {
+          case 1:
+            // 亮紫色
+            c = color(200, 100, 255, this.alpha);
+            break;
+          case 2:
+            // 亮藍色
+            c = color(50, 150, 255, this.alpha);
+            break;
+          case 3:
+            // 亮綠色
+            c = color(50, 255, 150, this.alpha);
+            break;
+          case 4:
+            // 亮粉色
+            c = color(255, 100, 150, this.alpha);
+            break;
+          case 5:
+            // 金黃色
+            c = color(255, 200, 50, this.alpha);
+            break;
+          default:
+            c = color(255, 255, 255, this.alpha);
+        }
+        
+        // 強烈的發光效果
+        for (let i = 3; i > 0; i--) {
+          let glowAlpha = this.alpha * 0.4 / i;
+          fill(red(c), green(c), blue(c), glowAlpha);
+          ellipse(this.pos.x, this.pos.y, this.size * (1 + i * 0.4), this.size * (1 + i * 0.4));
+        }
+        
+        // 白色核心
+        fill(255, 255, 255, this.alpha * 0.8);
+        ellipse(this.pos.x, this.pos.y, this.size * 0.6, this.size * 0.6);
+        
+        pop();
+      }
+
+      finished() {
+        return this.life < 0;
+      }
+    }
+    
+    // ========== 視覺模式 4: Shader Art (SamuelYAN Style) ==========
+    function drawShaderPattern() {
+      push();
+      
+      // 使用 shader
+      shader(theShader);
+      
+      // 設定 uniforms
+      theShader.setUniform("u_resolution", [width, height]);
+      theShader.setUniform("u_time", millis() / 1000.0);
+      theShader.setUniform("u_frame", frameCount / 1.0);
+      theShader.setUniform("u_mouse", [mouseX / 100.0, map(mouseY, 0, height, height, 0) / 100.0]);
+      
+      // 繪製全螢幕矩形
+      rect(0, 0, width, height);
+      
+      // 重置 shader
+      resetShader();
+      
+      pop();
+    }
+    
+    // ========== 視覺模式 5: Particle Fireworks (煙火效果) ==========
+    function drawParticlesPattern() {
+      push();
+      
+      // 切換到 2D 模式繪製
+      translate(-width/2, -height/2, 0);
+      
+      // 繪製漸層背景 - 深色夜空
+      blendMode(BLEND);
+      // 繪製漸層從上到下
+      for (let y = 0; y < height; y += 20) {
+        let inter = map(y, 0, height, 0, 1);
+        let c = lerpColor(color(10, 10, 30), color(30, 20, 50), inter);
+        fill(red(c), green(c), blue(c), 50);
+        rect(0, y, width, 20);
+      }
+      
+      // 使用 ADD 混合模式讓粒子發光
+      blendMode(ADD);
+      
+      // 更新和繪製所有粒子
+      for (let i = particles.length - 1; i >= 0; i--) {
+        if (i < particles.length) {
+          if (int(seed) % 2 == 0) {
+            particles[i].color_vision = color_vision;
+          }
+          particles[i].update();
+          particles[i].show();
+          
+          // 當粒子速度減緩時爆炸(更自然的時機)
+          if (particles[i].vel.y > -0.5 && !particles[i].exploded) {
+            particles[i].explode();
+          }
+          
+          // 移除已結束的粒子並創建新的
+          if (particles[i].finished()) {
+            particles.splice(i, 1);
+            seed = Math.random() * 1000;
+            color_vision = random([1, 2, 3, 4, 5]);
+            // 在底部創建新粒子(像煙火發射)
+            particles.push(new Particle(
+              random(width * 0.3, width * 0.7),
+              height - 50
+            ));
+          }
+        }
+      }
+      
+      pop();
+    }
+    
+    // ========== 視覺模式 6: 3D Heart Pattern (from Processing) ==========
+    function draw3DHeartPattern() {
+      randomSeed(seed);
+      
+      push();
+      
+      // 移動到遠處
+      translate(0, 0, -width * 2);
+      
+      // 旋轉動畫
+      rotateX(frameCount * rotationSpeed);
+      rotateY(frameCount * rotationSpeed);
+      rotateZ(frameCount * rotationSpeed * 0.5);
+      
+      // 繪製心形粒子雲
+      let pNum2 = 200;
+      for (let p = 0; p < pNum2; p++) {
+        let ttt = sin(time) * sin(time) * sin(time);
+        let yt = 13 * cos(time) - 5 * cos(2 * time) - 2 * cos(3 * time) - cos(4 * time);
+        
+        push();
+        translate(ttt * 16, yt, 0);
+        rotateX(360 / pNum2 * p);
+        rotateY(360 / pNum2 * p);
+        rotateZ(360 / pNum2 * p);
+        
+        // 隨機顏色
+        let hue = (p * 360 / pNum2 + time * 50) % 360;
+        stroke(hue, 80, 100, 50);
+        strokeWeight(random(1, 5));
+        
+        let lSize = width / random(50, 5);
+        point(lSize, lSize, lSize);
+        
+        // 連接線
+        push();
+        translate(p * random(0.1, 0.25) + sin(time) * 2, 
+                  p * random(0.1, 0.25) + sin(time) * 2, 
+                  p * random(0.1, 0.25) + sin(time) * 2);
+        rotateX(frameCount / 50);
+        rotateY(frameCount / 50);
+        rotateZ(frameCount / 50);
+        lSize = lSize / 1.1;
+        line(-lSize, lSize, lSize, lSize, lSize, lSize);
+        pop();
+        pop();
+      }
+      
+      // 立方體網格
+      let cubeSize = width / 4;
+      let plus = cubeSize / 2;
+      rez = 0.01;
+      
+      for (let i = -cubeSize / 2; i < cubeSize / 2 + plus; i += plus) {
+        for (let j = -cubeSize / 2; j < cubeSize / 2 + plus; j += plus) {
+          for (let k = -cubeSize / 2; k < cubeSize / 2 + plus; k += plus) {
+            
+            let n = noise(i * rez + time, j * rez + time, k * rez + time) * random(0.1, 3);
+            
+            push();
+            translate(i * n, j * n, k * n);
+            
+            // 內部粒子系統
+            let pNum = 5;
+            for (let p = 0; p < pNum; p++) {
+              translate(p * 0.5, p * 0.5, p * 0.5);
+              translate(i * n, j * n, k * n);
+              rotateX(360 / pNum * p);
+              rotateY(360 / pNum * p);
+              rotateZ(360 / pNum * p);
+              
+              noFill();
+              let hue = (time * 100 + p * 72) % 360;
+              stroke(hue, 80, 100, 50);
+              strokeWeight(random(1, 2));
+              let llSize = width / random(200, 100);
+              line(0, 0, 0, llSize, llSize, llSize);
+            }
+            
+            // 旋轉動畫
+            rotateX(TWO_PI / 4 * random([-1, 1]) * random([1, 2]));
+            rotateY(TWO_PI / 4 * random([-1, 1]) * random([1, 2]));
+            rotateZ(TWO_PI / 4 * random([-1, 1]) * random([1, 2]));
+            
+            switch (floor(random(3))) {
+              case 0:
+                rotateX(random([-1, 1]) * frameCount / 100);
+                break;
+              case 1:
+                rotateY(random([-1, 1]) * frameCount / 100);
+                break;
+              case 2:
+                rotateZ(n * random([-1, 1]) * frameCount / 100);
+                break;
+            }
+            
+            let planeSize = width / random([16, 32, 8]);
+            
+            push();
+            translate(i, j, k);
+            
+            if (random(1) > 0.5) {
+              // 球體
+              noStroke();
+              let hue = (time * 100 + i + j + k) % 360;
+              fill(hue, 80, 100, 60);
+              sphere(planeSize / 10);
+            } else {
+              // 線條
+              noFill();
+              let hue = (time * 100 + i + j + k) % 360;
+              stroke(hue, 80, 100, 60);
+              strokeWeight(random(1, 2));
+              
+              switch (floor(random(4))) {
+                case 0:
+                  line(-planeSize / 2, -planeSize / 2, planeSize / 2, -planeSize / 2);
+                  break;
+                case 1:
+                  line(planeSize / 2, -planeSize / 2, planeSize / 2, planeSize / 2);
+                  break;
+                case 2:
+                  line(planeSize / 2, planeSize / 2, -planeSize / 2, planeSize / 2);
+                  break;
+                case 3:
+                  line(-planeSize / 2, planeSize / 2, -planeSize / 2, -planeSize / 2);
+                  break;
+              }
+            }
+            pop();
+            
+            // 連接粒子
+            let px = plus / random(1, 6) / 2 / sin(n + 0.1);
+            let py = plus / random(1, 6) / 2 / cos(n + 0.1);
+            let pz = plus / random(1, 6) / 2 / (tan(n + 0.1) || 1);
+            
+            push();
+            noStroke();
+            let hue = (time * 100 + px + py) % 360;
+            fill(hue, 80, 100, 80);
+            translate(px, py, pz);
+            sphere(width / 1000);
+            pop();
+            
+            noFill();
+            stroke(hue, 80, 100, 30);
+            strokeWeight(random(0.5, 1.5));
+            line(0, 0, 0, px, py, pz);
+            
+            noStroke();
+            fill(hue, 80, 100, 60);
+            sphere(planeSize / random(5, 10));
+            
+            pop();
+          }
+        }
+      }
+      
+      pop();
+    }
+
+    // ========== 視覺模式 2: Symmetry Pattern (from Processing) ==========
+    function drawSymmetryPattern() {
+      randomSeed(seed);
+      background(0, 0, 5, 100);
+      
+      push();
+      translate(0, 0, -mySize * 4.0);
+      
+      // 隨機初始旋轉
+      rotateX(random(TWO_PI));
+      rotateY(random(TWO_PI));
+      rotateZ(random(TWO_PI));
+      
+      // 動態旋轉（三選一）
+      switch (floor(random(3))) {
+        case 0:
+          rotateX(random([-1, 1]) * frameCount / 100);
+          break;
+        case 1:
+          rotateY(random([-1, 1]) * frameCount / 100);
+          break;
+        case 2:
+          rotateZ(random([-1, 1]) * frameCount / 100);
+          break;
+      }
+      
+      let a = 1;
+      let b = 2;
+      let cubeSize = mySize / (a + a / b) / 2.0;
+      let plus = cubeSize / 5;
+      
+      for (let i = -cubeSize / b; i < cubeSize / b + plus; i += plus * a) {
+        for (let j = -cubeSize / b; j < cubeSize / b + plus; j += plus * a) {
+          for (let k = -cubeSize / b; k < cubeSize / b + plus; k += plus * a) {
+            
+            strokeCap(PROJECT);
+            let n = noise(i * rez + time, j * rez + time, k * rez + time) * random(1, 10);
+            
+            push();
+            translate(i * n, j * n, k * n);
+            
+            // 複雜旋轉
+            rotateX(TWO_PI / (b * b) * random([-a, a, b, -b]) * random([a, b, a + b, b * b]));
+            rotateY(TWO_PI / (b * b) * random([-a, a, b, -b]) * random([a, b, a + b, b * b]));
+            rotateZ(TWO_PI / (b * b) * random([-a, a, b, -b]) * random([a, b, a + b, b * b]));
+            
+            let planeSize = mySize / random([4, 16, 32, 64]);
+            
+            push();
+            translate(i, j, k);
+            
+            // 繪製平面或方框
+            if (random(1) > 0.33) {
+              // 平面
+              noStroke();
+              let colorIndex = floor(random(palette.length));
+              let c = color(palette[colorIndex]);
+              fill(hue(c), saturation(c), brightness(c), 60);
+              plane(planeSize);
+            } else {
+              // 線框
+              noFill();
+              let colorIndex = floor(random(palette.length));
+              let c = color(palette[colorIndex]);
+              stroke(hue(c), saturation(c), brightness(c), 80);
+              strokeWeight(random(1, 2));
+              
+              // 繪製方框的四條邊
+              line(-planeSize / 2, -planeSize / 2, planeSize / 2, -planeSize / 2);
+              line(planeSize / 2, -planeSize / 2, planeSize / 2, planeSize / 2);
+              line(planeSize / 2, planeSize / 2, -planeSize / 2, planeSize / 2);
+              line(-planeSize / 2, planeSize / 2, -planeSize / 2, -planeSize / 2);
+            }
+            pop();
+            
+            // 連接粒子
+            let px = plus / random(a, int(TWO_PI)) / b / sin(n + 0.1);
+            let py = plus / random(a, int(TWO_PI)) / b / cos(n + 0.1);
+            let pz = plus / random(a, int(TWO_PI)) / b / (tan(n + 0.1) || 1);
+            
+            push();
+            noStroke();
+            let colorIndex = floor(random(palette.length));
+            let c = color(palette[colorIndex]);
+            fill(hue(c), saturation(c), brightness(c), 80);
+            translate(px, py, pz);
+            rotateX(random([-1, 1]) * frameCount / 100);
+            rotateY(random([-1, 1]) * frameCount / 100);
+            rotateZ(random([-1, 1]) * frameCount / 100);
+            pop();
+            
+            // 連接線
+            noFill();
+            let colorIndex2 = floor(random(palette.length));
+            let c2 = color(palette[colorIndex2]);
+            stroke(hue(c2), saturation(c2), brightness(c2), 40);
+            strokeWeight(random(0.5, 1) * 2 / random(1, 100));
+            line(0, 0, 0, px, py, pz);
+            
+            pop();
+          }
+        }
+      }
+      
+      pop();
+    }
+
+    // ========== 音訊初始化 ==========
+    // ========== 初始化音訊系統 ==========
+    function initAudio() {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = 1.2; // 大幅提升音量 🔊
+        masterGain.connect(audioContext.destination);
+        console.log('🎹 音訊系統已初始化, 狀態:', audioContext.state);
+        console.log('🔊 masterGain 已創建並連接到 destination, 音量:', masterGain.gain.value);
+      } catch (error) {
+        console.error('❌ 音訊初始化失敗:', error);
+      }
+    }
+
+    // ========== 創建豐富的音色合成器 ==========
+    function createSynth(deviceId, color, noteIndex) {
+      // 音階: 五聲音階混合自然音階,更豐富的音域
+      const scale = [
+        130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, // 低音區
+        349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25,         // 中音區
+        698.46, 783.99, 880.00, 987.77, 1046.50, 1174.66, 1318.51       // 高音區
+      ];
+      const frequency = scale[noteIndex % scale.length];
+      
+      // 🎹 更豐富的諧波結構 (8 個諧波)
+      const harmonics = [
+        { freq: 1, gain: 1.0, detune: 0 },        // 基頻
+        { freq: 2, gain: 0.6, detune: 2 },        // 第二諧波 (稍微失諧)
+        { freq: 3, gain: 0.4, detune: -3 },       // 第三諧波
+        { freq: 4, gain: 0.25, detune: 1 },       // 第四諧波
+        { freq: 5, gain: 0.15, detune: -2 },      // 第五諧波
+        { freq: 6, gain: 0.1, detune: 3 },        // 第六諧波
+        { freq: 7, gain: 0.08, detune: -1 },      // 第七諧波
+        { freq: 8, gain: 0.05, detune: 2 },       // 第八諧波
+      ];
+      
+      const oscillators = [];
+      const gainNodes = [];
+      
+      // 創建多個振盪器模擬豐富的泛音,並添加失諧效果
+      harmonics.forEach(harmonic => {
+        const osc = audioContext.createOscillator();
+        osc.type = 'sine'; // 使用正弦波疊加
+        osc.frequency.value = frequency * harmonic.freq;
+        osc.detune.value = harmonic.detune; // 添加微小失諧,讓聲音更有生命力
+        
+        const gain = audioContext.createGain();
+        gain.gain.value = 0;
+        
+        osc.connect(gain);
+        oscillators.push(osc);
+        gainNodes.push({ node: gain, maxGain: harmonic.gain });
+      });
+      
+      // 添加低頻振盪器 (LFO) 用於調製
+      const lfo = audioContext.createOscillator();
+      lfo.frequency.value = 5; // 5Hz 調製
+      const lfoGain = audioContext.createGain();
+      lfoGain.gain.value = 15; // 調製深度
+      lfo.connect(lfoGain);
+      
+      // 主增益節點
+      const masterGainNode = audioContext.createGain();
+      masterGainNode.gain.value = 0;
+      
+      // 多段濾波器系統
+      const filter1 = audioContext.createBiquadFilter();
+      filter1.type = 'lowpass';
+      filter1.frequency.value = 4000 + (noteIndex * 150); // 更明亮
+      filter1.Q.value = 2; // 增強共鳴
+      
+      const filter2 = audioContext.createBiquadFilter();
+      filter2.type = 'highpass';
+      filter2.frequency.value = 80; // 去除低頻雜音
+      filter2.Q.value = 0.5;
+      
+      // LFO 調製濾波器頻率,產生顫音效果
+      lfoGain.connect(filter1.frequency);
+      
+      // 壓縮器 - 讓聲音更有力度
+      const compressor = audioContext.createDynamicsCompressor();
+      compressor.threshold.value = -20;
+      compressor.knee.value = 40;
+      compressor.ratio.value = 16;
+      compressor.attack.value = 0.001;
+      compressor.release.value = 0.2;
+      
+      // 殘響效果 - 模擬空間感
+      const convolver = audioContext.createConvolver();
+      createReverb(convolver);
+      const reverbGain = audioContext.createGain();
+      reverbGain.gain.value = 0.5; // 大幅增加殘響 (從 0.25 提升到 0.5)
+      
+      // 延遲效果 - 增加深度
+      const delay = audioContext.createDelay();
+      delay.delayTime.value = 0.15; // 150ms 延遲
+      const delayGain = audioContext.createGain();
+      delayGain.gain.value = 0.5; // 大幅增加延遲 (從 0.3 提升到 0.5)
+      
+      // 連接所有節點 - 更複雜的訊號鏈
+      gainNodes.forEach(g => g.node.connect(masterGainNode));
+      masterGainNode.connect(filter2); // 先高通濾波
+      filter2.connect(filter1);         // 再低通濾波
+      filter1.connect(compressor);      // 壓縮
+      
+      // 乾音路徑
+      compressor.connect(masterGain);
+      
+      // 濕音路徑 1: 殘響
+      compressor.connect(convolver);
+      convolver.connect(reverbGain);
+      reverbGain.connect(masterGain);
+      
+      // 濕音路徑 2: 延遲
+      compressor.connect(delay);
+      delay.connect(delayGain);
+      delayGain.connect(delay); // 反饋延遲
+      delayGain.connect(masterGain);
+      
+      // 啟動所有振盪器和 LFO
+      oscillators.forEach(osc => osc.start());
+      lfo.start();
+      
+      return {
+        oscillators,
+        gainNodes,
+        masterGainNode,
+        filter1,
+        filter2,
+        lfo,
+        attack: () => {
+          const now = audioContext.currentTime;
+          console.log('🎹 Attack 被調用, 頻率:', frequency.toFixed(2), 'Hz');
+          
+          // 🎹 更有表現力的 ADSR 包絡
+          gainNodes.forEach((g, index) => {
+            g.node.gain.cancelScheduledValues(now);
+            g.node.gain.setValueAtTime(0, now);
+            // 根據諧波位置調整 Attack 時間
+            const attackTime = 0.005 + (index * 0.001);
+            // 快速 Attack - 大幅提升音量 🔊
+            g.node.gain.linearRampToValueAtTime(g.maxGain * 1.5, now + attackTime);
+            // Decay to Sustain - 保持更高的持續音量
+            g.node.gain.exponentialRampToValueAtTime(g.maxGain * 0.9, now + 0.15);
+          });
+          
+          console.log('🎵 設定了', gainNodes.length, '個諧波增益');
+          
+          // 濾波器包絡 - 更動態的音色變化
+          filter1.frequency.cancelScheduledValues(now);
+          filter1.frequency.setValueAtTime(6000, now);
+          filter1.frequency.exponentialRampToValueAtTime(4000 + (noteIndex * 150), now + 0.08);
+          
+          filter2.frequency.cancelScheduledValues(now);
+          filter2.frequency.setValueAtTime(60, now);
+          filter2.frequency.exponentialRampToValueAtTime(80, now + 0.05);
+        },
+        release: () => {
+          const now = audioContext.currentTime;
+          
+          // 🎹 更長的 Release - 餘音繞樑 (1.2 秒)
+          gainNodes.forEach((g, index) => {
+            g.node.gain.cancelScheduledValues(now);
+            g.node.gain.setValueAtTime(g.node.gain.value, now);
+            // 不同諧波有不同的衰減時間
+            const releaseTime = 1.2 + (index * 0.1);
+            g.node.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
+          });
+          
+          // 濾波器緩慢關閉
+          filter1.frequency.cancelScheduledValues(now);
+          filter1.frequency.setValueAtTime(filter1.frequency.value, now);
+          filter1.frequency.exponentialRampToValueAtTime(800, now + 1.2);
+        },
+        stop: () => {
+          const now = audioContext.currentTime;
+          gainNodes.forEach(g => {
+            g.node.gain.cancelScheduledValues(now);
+            g.node.gain.setValueAtTime(g.node.gain.value, now);
+            g.node.gain.linearRampToValueAtTime(0, now + 0.1);
+          });
+          setTimeout(() => {
+            oscillators.forEach(osc => osc.stop());
+            lfo.stop();
+          }, 200);
+        }
+      };
+    }
+    
+    // ========== 創建殘響效果 ==========
+    function createReverb(convolver) {
+      const sampleRate = audioContext.sampleRate;
+      const length = sampleRate * 2; // 2秒殘響
+      const impulse = audioContext.createBuffer(2, length, sampleRate);
+      
+      for (let channel = 0; channel < 2; channel++) {
+        const channelData = impulse.getChannelData(channel);
+        for (let i = 0; i < length; i++) {
+          // 指數衰減的白噪音
+          channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+        }
+      }
+      
+      convolver.buffer = impulse;
+    }
+
+    // ========== 處理玩家互動 ==========
+    function handlePlayerInteraction(deviceId, payload) {
+      console.log('🎮 handlePlayerInteraction 被調用', { deviceId, payload });
+      
+      const now = Date.now();
+      
+      // 確保音訊系統已啟動
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('🔊 音訊已通過互動啟動');
+        });
+      }
+      
+      // 確保玩家存在
+      if (!players.has(deviceId)) {
+        const color = playerColors[colorIndex % playerColors.length];
+        const noteIndex = colorIndex % 15; // 15個音符
+        colorIndex++;
+        
+        players.set(deviceId, {
+          color: color,
+          name: deviceId,
+          noteIndex: noteIndex,
+          lastActivity: now,
+          interactions: 0
+        });
+        
+        console.log('👤 創建新玩家:', deviceId, '音符:', noteIndex);
+      }
+      
+      const player = players.get(deviceId);
+      player.lastActivity = now;
+      
+      if (payload.pressed) {
+        // 按下 - 觸發視覺和聲音
+        player.interactions++;
+        
+        // 創建視覺效果
+        createVisualEffect(player);
+        
+        // 創建或觸發音訊（鋼琴音色）
+        if (!synths.has(deviceId)) {
+          const synth = createSynth(deviceId, player.color, player.noteIndex);
+          synths.set(deviceId, synth);
+          console.log('🎹 創建新的鋼琴音色, 設備:', deviceId, '音符索引:', player.noteIndex);
+        }
+        synths.get(deviceId).attack();
+        console.log('🎵 觸發音符, 設備:', deviceId);
+        
+        // 移除自動切換模式 - 只能通過按鈕或按鍵切換
+        // (原本每3次互動會自動切換)
+        
+      } else {
+        // 釋放 - 聲音衰減(鋼琴自然衰減)
+        if (synths.has(deviceId)) {
+          synths.get(deviceId).release();
+        }
+      }
+      
+      updatePlayersList();
+    }
+    
+    // ========== 更新模式顯示 ==========
+    function updateModeDisplay() {
+      const modeNames = {
+        'neurons': 'Neural Network 🧠',
+        '3dheart': '3D Heart ❤️',
+        'symmetry': 'Symmetry 🔷',
+        'shader': 'Shader Art 🌈'
+      };
+      document.getElementById('currentMode').textContent = modeNames[currentMode] || currentMode.toUpperCase();
+    }
+    
+    // ========== 播放豐富的測試和弦 ==========
+    function playTestBeep() {
+      try {
+        if (!audioContext) {
+          console.warn('⚠️ audioContext 不存在');
+          return;
+        }
+        
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        
+        // 創建和弦 (C major - C E G)
+        const frequencies = [261.63, 329.63, 392.00]; // C E G
+        const now = audioContext.currentTime;
+        
+        frequencies.forEach((freq, index) => {
+          // 主音
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          
+          osc.frequency.value = freq;
+          osc.type = 'sine';
+          
+          gain.gain.value = 0;
+          
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.start(now);
+          
+          // 錯開 Attack 產生琶音效果
+          const delay = index * 0.05;
+          gain.gain.setValueAtTime(0, now + delay);
+          gain.gain.linearRampToValueAtTime(0.15, now + delay + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.4);
+          
+          osc.stop(now + delay + 0.5);
+        });
+        
+        console.log('🔊 測試和弦已播放 (C Major)');
+      } catch (error) {
+        console.error('❌ 播放測試聲音失敗:', error);
+      }
+    }
+
+    // ========== 創建視覺效果 ==========
+    function createVisualEffect(player) {
+      // 在當前模式下增加隨機性和動態變化
+      // 改變旋轉速度
+      rotationSpeed = random(0.005, 0.02);
+      
+      // 改變 rez 值影響噪聲
+      rez = random(0.001, 0.02);
+      
+      // 觸發時隨機改變 seed 的一部分（保持部分穩定性）
+      seed = seed + random(-100, 100);
+    }
+
+    // ========== 更新玩家列表 ==========
+    function updatePlayersList() {
+      const now = Date.now();
+      const playersList = document.getElementById('playersList');
+      playersList.innerHTML = '';
+      document.getElementById('playerCount').textContent = players.size;
+      
+      players.forEach((player, deviceId) => {
+        const isActive = now - player.lastActivity < 3000;
+        const div = document.createElement('div');
+        div.className = `player-item ${isActive ? 'active' : ''}`;
+        div.innerHTML = `
+          <div class="player-color" style="background: ${player.color}"></div>
+          <div class="player-name">${player.name}</div>
+        `;
+        playersList.appendChild(div);
+      });
+    }
+
+    // ========== WebSocket ==========
+    function connectWebSocket() {
+      ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => {
+        console.log('✅ WebSocket 連接成功');
+        document.getElementById('connectionDot').classList.add('connected');
+        document.getElementById('connectionText').textContent = '已連接';
+        
+        ws.send(JSON.stringify({
+          type: 'subscribe',
+          topic: 'art/button/#'
+        }));
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.topic && data.topic.includes('art/button')) {
+            const payload = JSON.parse(data.payload);
+            const deviceId = data.topic.split('/').pop();
+            handlePlayerInteraction(deviceId, payload);
+          }
+        } catch (e) {
+          console.error('解析錯誤:', e);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 WebSocket 已斷開');
+        document.getElementById('connectionDot').classList.remove('connected');
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    // ========== 測試聲音按鈕 ==========
+    document.getElementById('testSoundBtn').addEventListener('click', async () => {
+      console.log('🔊 測試聲音按鈕被點擊');
+      
+      try {
+        // 確保音訊系統存在
+        if (!audioContext) {
+          console.log('⚠️ audioContext 不存在,重新初始化');
+          initAudio();
+        }
+        
+        // 確保音訊上下文已啟動
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+          console.log('🔊 音訊上下文已恢復, 狀態:', audioContext.state);
+        }
+        
+        console.log('🎵 當前音訊狀態:', audioContext.state);
+        console.log('🔊 masterGain 存在:', !!masterGain);
+        
+        // 播放簡單的測試音 - 直接連接到 destination
+        const testOsc = audioContext.createOscillator();
+        const testGain = audioContext.createGain();
+        
+        testOsc.type = 'sine';
+        testOsc.frequency.value = 440; // A4 音符
+        testGain.gain.value = 0;
+        
+        testOsc.connect(testGain);
+        testGain.connect(audioContext.destination); // 直接連接,不通過 masterGain
+        
+        testOsc.start();
+        
+        // ADSR 包絡
+        const now = audioContext.currentTime;
+        testGain.gain.setValueAtTime(0, now);
+        testGain.gain.linearRampToValueAtTime(0.3, now + 0.01); // Attack
+        testGain.gain.linearRampToValueAtTime(0.2, now + 0.1);  // Decay
+        testGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);    // Release
+        
+        testOsc.stop(now + 0.6);
+        
+        console.log('🎵 測試音已播放 (440 Hz, 持續 0.5 秒)');
+        
+        // 改變按鈕文字給予反饋
+        const btn = document.getElementById('testSoundBtn');
+        const originalText = btn.textContent;
+        btn.textContent = '✅ 聲音已播放!';
+        btn.style.background = '#00ff88';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '#00ff88';
+        }, 1000);
+        
+      } catch (error) {
+        console.error('❌ 測試聲音錯誤:', error);
+        alert('音訊播放失敗: ' + error.message);
+      }
+    });
+
+    // ========== Join ==========
+    document.getElementById('joinBtn').addEventListener('click', () => {
+      myDeviceId = document.getElementById('deviceIdInput').value.trim();
+      if (!myDeviceId) {
+        alert('請輸入設備 ID');
+        return;
+      }
+      
+      document.getElementById('joinPanel').classList.add('hidden');
+      connectWebSocket();
+      
+      // 恢復音訊上下文
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('🔊 音訊已啟動');
+        });
+      }
+      
+      updateModeDisplay();
+    });
+    
+    // ========== 模式切換按鈕 ==========
+    document.getElementById('nextModeBtn').addEventListener('click', () => {
+      modeIndex = (modeIndex + 1) % modes.length;
+      currentMode = modes[modeIndex];
+      updateModeDisplay();
+    });
+
+    // ========== 窗口調整 ==========
+    function windowResized() {
+      mySize = min(windowWidth, windowHeight) * 0.9;
+      resizeCanvas(windowWidth, windowHeight);
+    }
+
+    // ========== 測試：滑鼠點擊 ==========
+    function mousePressed() {
+      console.log('🖱️ 滑鼠按下, 位置:', mouseX, mouseY);
+      
+      // 先播放簡單的測試音
+      playTestBeep();
+      
+      // 恢復音訊上下文(處理瀏覽器自動播放限制)
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('🔊 音訊上下文已通過滑鼠點擊啟動');
+        });
+      }
+      
+      console.log('🔊 音訊上下文狀態:', audioContext ? audioContext.state : 'audioContext 不存在');
+      
+      // 在神經網絡模式下,點擊滑鼠添加新神經元
+      if (currentMode === 'neurons') {
+        // 將滑鼠座標轉換到3D空間
+        let x = map(mouseX, 0, width, -width/2, width/2);
+        let y = map(mouseY, 0, height, -height/2, height/2);
+        
+        // 創建新神經元
+        let newNeuron = new Neuron(x, y);
+        neurons.push(newNeuron);
+        
+        // 與附近的神經元建立突觸連接 (5% 機率)
+        for (let other of neurons) {
+          if (other !== newNeuron && random() < 0.05) {
+            connections.push(new Synapse(newNeuron, other));
+            connections.push(new Synapse(other, newNeuron));
+          }
+        }
+        
+        // 讓新神經元立即發火
+        newNeuron.fire();
+      }
+      
+      // 如果還未加入,使用臨時 ID
+      const deviceId = myDeviceId || 'local-temp';
+      handlePlayerInteraction(deviceId, { pressed: true });
+    }
+
+    function mouseReleased() {
+      const deviceId = myDeviceId || 'local-temp';
+      handlePlayerInteraction(deviceId, { pressed: false });
+    }
+    
+    // ========== 鍵盤控制 ==========
+    function keyPressed() {
+      // 如果焦點在輸入框,不執行鍵盤快捷鍵
+      const activeElement = document.activeElement;
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        return;
+      }
+      
+      if (key === ' ') {
+        // 空白鍵切換模式
+        modeIndex = (modeIndex + 1) % modes.length;
+        currentMode = modes[modeIndex];
+        updateModeDisplay();
+      } else if (key === 's' || key === 'S') {
+        // 儲存截圖
+        saveCanvas('audiovisual-art', 'png');
+      }
+    }
+  </script>
+</body>
+</html>

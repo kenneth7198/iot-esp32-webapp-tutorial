@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🎨 Artistic Controller</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000;
+      color: white;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ========== Header ========== */
+    .header {
+      background: rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .device-name {
+      font-size: 14px;
+      color: #00ff88;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+    }
+
+    .status {
+      font-size: 10px;
+      color: #888;
+    }
+
+    .status.connected {
+      color: #00ff88;
+    }
+
+    /* ========== UI Selector ========== */
+    .ui-selector {
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .ui-btn {
+      min-width: 60px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      color: white;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .ui-btn.active {
+      background: #00ff88;
+      color: #000;
+      border-color: #00ff88;
+    }
+
+    /* ========== Controller Area ========== */
+    .controller {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ========== UI 1: Circular Waves ========== */
+    .ui-circular {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, #1a1a2e, #000);
+    }
+
+    .circular-button {
+      width: 60vw;
+      height: 60vw;
+      max-width: 300px;
+      max-height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00ff88, #0088ff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 0 50px rgba(0, 255, 136, 0.5);
+    }
+
+    .circular-button:active {
+      transform: scale(0.9);
+      box-shadow: 0 0 80px rgba(0, 255, 136, 0.8);
+    }
+
+    /* ========== UI 2: Grid Matrix ========== */
+    .ui-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 10px;
+      padding: 20px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .grid-cell {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .grid-cell:active {
+      transform: scale(0.9);
+      filter: brightness(1.5);
+    }
+
+    /* ========== UI 3: Plasma Touch ========== */
+    .ui-plasma {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ========== UI 4: Particle Touch ========== */
+    .ui-particle {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    /* ========== UI 5: Liquid Button ========== */
+    .ui-liquid {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    }
+
+    .liquid-button {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #ff00ff, #00ffff);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+
+    .liquid-button::before {
+      content: '';
+      position: absolute;
+      width: 300%;
+      height: 300%;
+      background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+      animation: liquidMove 3s infinite;
+    }
+
+    @keyframes liquidMove {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-30%, -30%) scale(1.1); }
+    }
+
+    /* ========== UI 6: Neon Lines ========== */
+    .ui-neon {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      padding: 20px;
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    .neon-line {
+      height: 60px;
+      background: linear-gradient(90deg, #ff0080, #00ffff);
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 0 20px currentColor;
+      transition: all 0.2s;
+    }
+
+    .neon-line:active {
+      transform: scaleY(0.8);
+      box-shadow: 0 0 40px currentColor;
+    }
+
+    /* ========== UI 7: Spiral ========== */
+    .ui-spiral {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    /* ========== UI 8: Mosaic ========== */
+    .ui-mosaic {
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      height: 100%;
+    }
+
+    .mosaic-tile {
+      width: 25%;
+      height: 25%;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mosaic-tile:active {
+      transform: scale(0.95);
+      filter: brightness(1.5);
+    }
+
+    /* ========== UI 9: Radial Burst ========== */
+    .ui-radial {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    /* ========== UI 10: Fluid Canvas ========== */
+    .ui-fluid {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    /* ========== Join Screen ========== */
+    .join-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      z-index: 1000;
+    }
+
+    .join-screen.hidden {
+      display: none;
+    }
+
+    .join-screen h1 {
+      font-size: 32px;
+      color: #00ff88;
+      margin-bottom: 20px;
+      letter-spacing: 3px;
+    }
+
+    .join-screen input {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #00ff88;
+      border-radius: 10px;
+      color: white;
+      font-size: 16px;
+    }
+
+    .join-screen button {
+      width: 100%;
+      padding: 15px;
+      background: #00ff88;
+      border: none;
+      border-radius: 10px;
+      color: #000;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Join Screen -->
+  <div class="join-screen" id="joinScreen">
+    <h1>🎨 ART CONTROLLER</h1>
+    <input type="text" id="deviceInput" placeholder="輸入設備 ID" />
+    <button id="joinButton">連接</button>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" style="display: none;">
+    <!-- Header -->
+    <div class="header">
+      <div class="device-name" id="deviceName">DEVICE</div>
+      <div class="status" id="status">連接中...</div>
+    </div>
+
+    <!-- UI Selector -->
+    <div class="ui-selector">
+      <button class="ui-btn active" data-ui="circular">⭕ Circular</button>
+      <button class="ui-btn" data-ui="grid">⬜ Grid</button>
+      <button class="ui-btn" data-ui="plasma">🌊 Plasma</button>
+      <button class="ui-btn" data-ui="particle">✨ Particle</button>
+      <button class="ui-btn" data-ui="liquid">💧 Liquid</button>
+      <button class="ui-btn" data-ui="neon">⚡ Neon</button>
+      <button class="ui-btn" data-ui="spiral">🌀 Spiral</button>
+      <button class="ui-btn" data-ui="mosaic">🎨 Mosaic</button>
+      <button class="ui-btn" data-ui="radial">💥 Radial</button>
+      <button class="ui-btn" data-ui="fluid">🌈 Fluid</button>
+    </div>
+
+    <!-- Controller Area -->
+    <div class="controller" id="controller">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // ========== 設定 ==========
+    const WS_URL = 'ws://192.168.100.200:8080';
+    let ws = null;
+    let deviceId = '';
+    let currentUI = 'circular';
+    let isPressed = false;
+
+    // ========== Canvas ==========
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let animationId = null;
+
+    // ========== 粒子系統 ==========
+    let particles = [];
+    let time = 0;
+
+    // ========== 初始化 ==========
+    function init() {
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      
+      // UI 選擇器
+      document.querySelectorAll('.ui-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentUI = btn.dataset.ui;
+          switchUI(currentUI);
+        });
+      });
+
+      // 觸控事件
+      const controller = document.getElementById('controller');
+      controller.addEventListener('touchstart', handleTouchStart, { passive: false });
+      controller.addEventListener('touchend', handleTouchEnd, { passive: false });
+      controller.addEventListener('touchmove', handleTouchMove, { passive: false });
+      
+      // 滑鼠事件（測試用）
+      controller.addEventListener('mousedown', handleTouchStart);
+      controller.addEventListener('mouseup', handleTouchEnd);
+      controller.addEventListener('mousemove', handleTouchMove);
+
+      // 初始化 UI
+      switchUI(currentUI);
+    }
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight - 120;
+    }
+
+    // ========== UI 切換 ==========
+    function switchUI(ui) {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      
+      particles = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      switch(ui) {
+        case 'circular':
+          drawCircularUI();
+          break;
+        case 'grid':
+          drawGridUI();
+          break;
+        case 'plasma':
+          animatePlasma();
+          break;
+        case 'particle':
+          animateParticles();
+          break;
+        case 'liquid':
+          drawLiquidUI();
+          break;
+        case 'neon':
+          drawNeonUI();
+          break;
+        case 'spiral':
+          animateSpiral();
+          break;
+        case 'mosaic':
+          drawMosaicUI();
+          break;
+        case 'radial':
+          animateRadial();
+          break;
+        case 'fluid':
+          animateFluid();
+          break;
+      }
+    }
+
+    // ========== UI 1: Circular Waves ==========
+    function drawCircularUI() {
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        for (let i = 0; i < 5; i++) {
+          const radius = (time * 2 + i * 50) % 300;
+          const alpha = 1 - radius / 300;
+          
+          ctx.strokeStyle = `rgba(0, 255, 136, ${alpha})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        
+        if (isPressed) {
+          ctx.fillStyle = 'rgba(0, 255, 136, 0.3)';
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 150, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 2: Grid Matrix ==========
+    function drawGridUI() {
+      const cols = 4;
+      const rows = 6;
+      const cellWidth = canvas.width / cols;
+      const cellHeight = canvas.height / rows;
+      
+      function animate() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const x = i * cellWidth;
+            const y = j * cellHeight;
+            const hue = (time + i * 30 + j * 30) % 360;
+            
+            ctx.fillStyle = `hsla(${hue}, 70%, 50%, 0.5)`;
+            ctx.fillRect(x + 5, y + 5, cellWidth - 10, cellHeight - 10);
+            
+            if (isPressed) {
+              ctx.fillStyle = `hsla(${hue}, 100%, 70%, 0.8)`;
+              ctx.fillRect(x + 5, y + 5, cellWidth - 10, cellHeight - 10);
+            }
+          }
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 3: Plasma ==========
+    function animatePlasma() {
+      function animate() {
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const value = Math.sin(x / 30 + time / 10) +
+                         Math.sin(y / 40 + time / 8) +
+                         Math.sin((x + y) / 50 + time / 12);
+            
+            const index = (y * canvas.width + x) * 4;
+            const color = Math.floor((value + 3) / 6 * 255);
+            
+            data[index] = color;
+            data[index + 1] = color * 0.5;
+            data[index + 2] = 255 - color;
+            data[index + 3] = 255;
+          }
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        
+        if (isPressed) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 4: Particles ==========
+    function animateParticles() {
+      for (let i = 0; i < 100; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: Math.random() * 2 - 1,
+          vy: Math.random() * 2 - 1,
+          size: Math.random() * 3 + 1,
+          hue: Math.random() * 360
+        });
+      }
+      
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          
+          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+          
+          ctx.fillStyle = `hsla(${p.hue}, 70%, 50%, 0.8)`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          
+          if (isPressed) {
+            p.vx *= 1.1;
+            p.vy *= 1.1;
+          }
+        });
+        
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 5: Liquid ==========
+    function drawLiquidUI() {
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        for (let i = 0; i < 8; i++) {
+          const angle = (time / 50 + i * Math.PI / 4) % (Math.PI * 2);
+          const radius = 100 + Math.sin(time / 20 + i) * 30;
+          const x = centerX + Math.cos(angle) * radius;
+          const y = centerY + Math.sin(angle) * radius;
+          
+          const gradient = ctx.createRadialGradient(x, y, 0, x, y, 50);
+          gradient.addColorStop(0, `hsla(${time % 360}, 70%, 50%, 0.8)`);
+          gradient.addColorStop(1, 'transparent');
+          
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(x, y, 50, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 6: Neon Lines ==========
+    function drawNeonUI() {
+      function animate() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const lines = 8;
+        for (let i = 0; i < lines; i++) {
+          const y = (i + 1) * canvas.height / (lines + 1);
+          const width = canvas.width * 0.8;
+          const x = canvas.width * 0.1;
+          const offset = Math.sin(time / 20 + i) * 20;
+          const hue = (time + i * 45) % 360;
+          
+          ctx.strokeStyle = `hsla(${hue}, 100%, 50%, 0.8)`;
+          ctx.lineWidth = 10;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(x, y + offset);
+          ctx.lineTo(x + width, y + offset);
+          ctx.stroke();
+          
+          if (isPressed) {
+            ctx.shadowColor = `hsla(${hue}, 100%, 50%, 1)`;
+            ctx.shadowBlur = 30;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 7: Spiral ==========
+    function animateSpiral() {
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        ctx.strokeStyle = `hsla(${time % 360}, 70%, 50%, 0.8)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        for (let i = 0; i < 200; i++) {
+          const angle = i * 0.1 + time / 50;
+          const radius = i * 1.5;
+          const x = centerX + Math.cos(angle) * radius;
+          const y = centerY + Math.sin(angle) * radius;
+          
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        
+        ctx.stroke();
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 8: Mosaic ==========
+    function drawMosaicUI() {
+      function animate() {
+        const tileSize = 30;
+        const cols = Math.ceil(canvas.width / tileSize);
+        const rows = Math.ceil(canvas.height / tileSize);
+        
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const hue = (time + i * 10 + j * 10) % 360;
+            const brightness = isPressed ? 70 : 50;
+            ctx.fillStyle = `hsla(${hue}, 70%, ${brightness}%, 0.8)`;
+            ctx.fillRect(i * tileSize, j * tileSize, tileSize - 2, tileSize - 2);
+          }
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 9: Radial Burst ==========
+    function animateRadial() {
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const arms = 12;
+        
+        for (let i = 0; i < arms; i++) {
+          const angle = (i / arms) * Math.PI * 2 + time / 50;
+          const length = 150 + Math.sin(time / 20 + i) * 50;
+          
+          const gradient = ctx.createLinearGradient(
+            centerX, centerY,
+            centerX + Math.cos(angle) * length,
+            centerY + Math.sin(angle) * length
+          );
+          
+          const hue = (time + i * 30) % 360;
+          gradient.addColorStop(0, `hsla(${hue}, 70%, 50%, 0.8)`);
+          gradient.addColorStop(1, 'transparent');
+          
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(
+            centerX + Math.cos(angle) * length,
+            centerY + Math.sin(angle) * length
+          );
+          ctx.stroke();
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== UI 10: Fluid ==========
+    function animateFluid() {
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        for (let x = 0; x < canvas.width; x += 20) {
+          for (let y = 0; y < canvas.height; y += 20) {
+            const value = Math.sin(x / 50 + time / 10) * Math.cos(y / 50 + time / 8);
+            const hue = (value + 1) * 180;
+            const size = (value + 1) * 5 + 2;
+            
+            ctx.fillStyle = `hsla(${hue}, 70%, 50%, 0.6)`;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        
+        time++;
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // ========== 觸控處理 ==========
+    function handleTouchStart(e) {
+      e.preventDefault();
+      isPressed = true;
+      sendButtonState(true);
+    }
+
+    function handleTouchEnd(e) {
+      e.preventDefault();
+      isPressed = false;
+      sendButtonState(false);
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault();
+    }
+
+    // ========== WebSocket ==========
+    function sendButtonState(pressed) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = JSON.stringify({
+          type: 'publish',
+          topic: `art/button/${deviceId}`,
+          payload: JSON.stringify({ pressed: pressed })
+        });
+        ws.send(message);
+      }
+    }
+
+    function connectWebSocket() {
+      ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => {
+        console.log('✅ 已連接');
+        document.getElementById('status').textContent = '✓ 已連接';
+        document.getElementById('status').classList.add('connected');
+      };
+      
+      ws.onerror = () => {
+        console.error('❌ 連接錯誤');
+        document.getElementById('status').textContent = '✗ 連接錯誤';
+        document.getElementById('status').classList.remove('connected');
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 已斷開');
+        document.getElementById('status').textContent = '○ 已斷開';
+        document.getElementById('status').classList.remove('connected');
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    // ========== Join ==========
+    document.getElementById('joinButton').addEventListener('click', () => {
+      deviceId = document.getElementById('deviceInput').value.trim();
+      if (!deviceId) {
+        alert('請輸入設備 ID');
+        return;
+      }
+      
+      document.getElementById('deviceName').textContent = deviceId;
+      document.getElementById('joinScreen').classList.add('hidden');
+      document.getElementById('app').style.display = 'flex';
+      
+      init();
+      connectWebSocket();
+    });
+  </script>
+</body>
+</html>
