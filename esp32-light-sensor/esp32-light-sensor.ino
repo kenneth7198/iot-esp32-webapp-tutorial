@@ -20,7 +20,7 @@ IPAddress primaryDNS(8, 8, 8, 8);             // DNS 伺服器
 // MQTT Broker 設定
 const char* MQTT_HOST = "192.168.100.200";    // MQTT Broker IP（伺服器 IP）
 const int   MQTT_PORT = 1883;                 // MQTT Port
-const char* DEVICE_ID = "esp32-device-01";    // 設備 ID（device-01 到 device-09）
+const char* DEVICE_ID = "esp32-device-09";    // 設備 ID（device-01 到 device-09）
 
 // 硬體設定
 const int LIGHT_SENSOR_PIN = 34;              // 光敏電阻接在 GPIO 34 (ADC1)

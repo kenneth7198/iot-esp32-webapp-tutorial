@@ -49,6 +49,30 @@
       opacity: 0.8;
     }
 
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 15px;
+      background: rgba(255, 107, 0, 0.2);
+      border: 2px solid #ff6b00;
+      border-radius: 10px;
+      padding: 8px 15px;
+      color: #ffa500;
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .back-button:hover,
+    .back-button:active {
+      background: rgba(255, 107, 0, 0.4);
+      transform: scale(1.05);
+    }
+
     .status-container {
       padding: 15px;
       text-align: center;
@@ -74,32 +98,67 @@
       text-shadow: 0 0 10px currentColor;
     }
 
-    .shake-detector {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .shake-count {
-      font-size: 72px;
-      font-weight: bold;
-      color: #ff6b00;
-      text-shadow: 0 0 20px #ff6b00;
-      margin: 20px 0;
-    }
-
-    .shake-instruction {
-      font-size: 18px;
+    .light-info-top {
+      position: fixed;
+      top: 200px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #ff6b00;
+      border-radius: 15px;
+      padding: 15px 25px;
       text-align: center;
-      margin: 10px 0;
+      z-index: 100;
+      min-width: 200px;
+    }
+
+    .light-value-top {
+      font-size: 18px;
+      color: #ffaa00;
+      font-weight: bold;
+    }
+
+    .instruction-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      border: 3px solid #ff6b00;
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      z-index: 1000;
+      max-width: 80%;
+      box-shadow: 0 0 30px rgba(255, 107, 0, 0.5);
+      display: none;
+    }
+
+    .instruction-message.show {
+      display: block;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .instruction-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
       animation: pulse 2s ease-in-out infinite;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+
+    .instruction-text {
+      font-size: 18px;
+      line-height: 1.8;
+      color: #ffaa00;
     }
 
     .control-pad {
@@ -108,11 +167,6 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      display: none;
-    }
-
-    .control-pad.active {
-      display: flex;
     }
 
     .d-pad {
@@ -154,27 +208,49 @@
     .btn-left { top: 100px; left: 0; }
     .btn-right { top: 100px; right: 0; }
 
-    .center-status {
+    .btn-grab {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      text-align: center;
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(145deg, #ffd700, #ffaa00);
+      border: 4px solid #fff;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      cursor: pointer;
+      box-shadow: 0 5px 20px rgba(255, 215, 0, 0.7);
+      transition: all 0.1s;
+      user-select: none;
     }
 
-    .light-status {
-      font-size: 48px;
-      animation: glow 2s ease-in-out infinite;
+    .btn-grab:active {
+      transform: translate(-50%, -50%) scale(0.9);
+      box-shadow: 0 2px 10px rgba(255, 215, 0, 0.7);
+    }
+
+    .btn-grab.disabled {
+      background: #555;
+      opacity: 0.3;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-grab-text {
+      font-size: 12px;
+      margin-top: 5px;
+      color: #000;
+      font-weight: bold;
     }
 
     @keyframes glow {
       0%, 100% { text-shadow: 0 0 10px currentColor; }
       50% { text-shadow: 0 0 30px currentColor; }
-    }
-
-    .light-value {
-      font-size: 18px;
-      margin-top: 10px;
     }
 
     .flashlight-hint {
@@ -213,6 +289,11 @@
   </style>
 </head>
 <body>
+  <a href="ghost-controller-select.html" class="back-button">
+    <span>◀</span>
+    <span>返回</span>
+  </a>
+
   <div class="connection-status" id="connectionStatus"></div>
 
   <div class="header">
@@ -227,26 +308,33 @@
     </div>
   </div>
 
-  <!-- 搖動偵測區 -->
-  <div class="shake-detector" id="shakeDetector">
-    <div class="shake-instruction">🔦 請先用手電筒照亮光敏電阻</div>
-    <div class="shake-instruction">然後左右搖動手機 3 次啟動</div>
-    <div class="shake-count" id="shakeCount">0 / 3</div>
-    <div class="shake-instruction" style="font-size: 14px;">搖動速度越快越好！</div>
+  <!-- 光線資訊顯示在上方 -->
+  <div class="light-info-top">
+    <div class="light-value-top" id="lightValue">光線：等待數據...</div>
+  </div>
+
+  <!-- 提示訊息 -->
+  <div class="instruction-message" id="instructionMessage">
+    <div class="instruction-icon">🔦</div>
+    <div class="instruction-text">
+      請用手電筒照亮 ESP32 的光敏電阻<br>
+      光線充足後即可開始控制鬼魂
+    </div>
   </div>
 
   <!-- 方向控制區 -->
-  <div class="control-pad" id="controlPad">
+  <div class="control-pad active" id="controlPad">
     <div class="d-pad">
       <button class="btn-direction btn-up" data-direction="up">⬆️</button>
       <button class="btn-direction btn-down" data-direction="down">⬇️</button>
       <button class="btn-direction btn-left" data-direction="left">⬅️</button>
       <button class="btn-direction btn-right" data-direction="right">➡️</button>
       
-      <div class="center-status">
-        <div class="light-status" id="lightStatus">🌑</div>
-        <div class="light-value" id="lightValue">等待光線數據...</div>
-      </div>
+      <!-- 中間只保留抓取按鈕 -->
+      <button class="btn-grab" id="btnGrab">
+        <span>💎</span>
+        <span class="btn-grab-text">抓取</span>
+      </button>
     </div>
   </div>
 
@@ -259,9 +347,15 @@
     // ========== 設定 ==========
     const WS_URL = 'ws://192.168.100.200:8080';
     
-    // 從 URL 參數取得 device ID，預設為 device-01
-    const urlParams = new URLSearchParams(window.location.search);
-    const DEVICE_NUMBER = urlParams.get('device') || '01';
+    // 從 sessionStorage 或 URL 參數取得 device ID，預設為 device-01
+    let DEVICE_NUMBER = sessionStorage.getItem('selectedDevice');
+    if (!DEVICE_NUMBER) {
+      // 如果 sessionStorage 沒有，嘗試從 URL 參數讀取
+      const urlParams = new URLSearchParams(window.location.search);
+      DEVICE_NUMBER = urlParams.get('device') || '01';
+      // 儲存到 sessionStorage 供下次使用
+      sessionStorage.setItem('selectedDevice', DEVICE_NUMBER);
+    }
     const DEVICE_ID = `esp32-device-${DEVICE_NUMBER}`;
     
     // 光線閾值（需要與 ESP32 一致）
@@ -269,9 +363,6 @@
     
     // ========== 狀態 ==========
     let ws = null;
-    let isActivated = false;  // 是否已啟動（搖動3次）
-    let shakeCount = 0;
-    let lastShakeTime = 0;
     let currentLight = 0;
     let isLightActive = false;
     
@@ -279,8 +370,7 @@
     const deviceIdEl = document.getElementById('deviceId');
     const wsStatusEl = document.getElementById('wsStatus');
     const connectionStatusEl = document.getElementById('connectionStatus');
-    const shakeDetectorEl = document.getElementById('shakeDetector');
-    const shakeCountEl = document.getElementById('shakeCount');
+    const instructionMessageEl = document.getElementById('instructionMessage');
     const controlPadEl = document.getElementById('controlPad');
     const lightStatusEl = document.getElementById('lightStatus');
     const lightValueEl = document.getElementById('lightValue');
@@ -340,26 +430,32 @@
     // 處理接收到的訊息
     function handleMessage(data) {
       if (data.topic && data.topic.includes('/light')) {
-        // 光線數據
+        // 檢查是否是自己設備的光線數據
+        const expectedTopic = `esp32/${DEVICE_ID}/light`;
+        if (data.topic !== expectedTopic) {
+          console.log(`🚫 忽略其他設備數據: ${data.topic}`);
+          return; // 忽略其他設備的光線數據
+        }
+        
+        // 處理自己設備的光線數據
         const payload = JSON.parse(data.payload);
         currentLight = payload.light;
         isLightActive = payload.active;
         
+        console.log(`💡 ${DEVICE_ID} 光線值: ${currentLight} (active: ${isLightActive})`);
         updateLightDisplay();
       }
     }
     
     // 更新光線顯示
     function updateLightDisplay() {
-      lightValueEl.textContent = `光線: ${currentLight}`;
+      lightValueEl.textContent = `光線：${currentLight}`;
       
       if (isLightActive) {
-        lightStatusEl.textContent = '👻';
-        lightStatusEl.style.color = '#ffa500';
+        lightValueEl.style.color = '#0f0';
         flashlightHintEl.style.display = 'none';
       } else {
-        lightStatusEl.textContent = '🌑';
-        lightStatusEl.style.color = '#666';
+        lightValueEl.style.color = '#ffaa00';
         flashlightHintEl.style.display = 'block';
       }
       
@@ -370,67 +466,43 @@
     // 更新按鈕狀態（光線不足時禁用）
     function updateButtonStates() {
       const buttons = document.querySelectorAll('.btn-direction');
+      const grabButton = document.getElementById('btnGrab');
+      
       buttons.forEach(btn => {
-        if (isActivated && isLightActive) {
+        if (isLightActive) {
           btn.classList.remove('disabled');
         } else {
           btn.classList.add('disabled');
         }
       });
-    }
-    
-    // ========== 搖動偵測 ==========
-    if (window.DeviceMotionEvent) {
-      window.addEventListener('devicemotion', handleMotion);
-    }
-    
-    function handleMotion(event) {
-      if (isActivated) return;  // 已啟動就不再偵測
       
-      const acc = event.accelerationIncludingGravity;
-      const x = acc.x;
-      const y = acc.y;
-      const z = acc.z;
-      
-      // 計算加速度總量
-      const magnitude = Math.sqrt(x*x + y*y + z*z);
-      
-      // 偵測左右搖動（X 軸變化大）
-      const now = Date.now();
-      if (Math.abs(x) > 15 && now - lastShakeTime > 300) {
-        lastShakeTime = now;
-        shakeCount++;
-        shakeCountEl.textContent = `${shakeCount} / 3`;
-        
-        // 震動回饋
-        if (navigator.vibrate) {
-          navigator.vibrate(100);
-        }
-        
-        if (shakeCount >= 3) {
-          activateController();
+      // 抓取按鈕也需要光線激活
+      if (grabButton) {
+        if (isLightActive) {
+          grabButton.classList.remove('disabled');
+        } else {
+          grabButton.classList.add('disabled');
         }
       }
+      
+      // 同時更新指示訊息顯示
+      updateInstructionDisplay();
     }
     
-    // 啟動控制器
-    function activateController() {
-      isActivated = true;
-      shakeDetectorEl.style.display = 'none';
-      controlPadEl.classList.add('active');
-      
-      console.log('🎮 控制器已啟動！');
-      
-      if (navigator.vibrate) {
-        navigator.vibrate([200, 100, 200]);
+    // ========== 指示訊息顯示 ==========
+    function updateInstructionDisplay() {
+      if (isLightActive) {
+        instructionMessageEl.style.display = 'none';
+      } else {
+        instructionMessageEl.style.display = 'block';
       }
     }
     
     // ========== 方向控制 ==========
     document.querySelectorAll('.btn-direction').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (!isActivated || !isLightActive) {
-          console.log('❌ 無法移動：未啟動或光線不足');
+        if (!isLightActive) {
+          console.log('❌ 無法移動：光線不足');
           if (navigator.vibrate) {
             navigator.vibrate(50);
           }
@@ -461,6 +533,39 @@
       
       ws.send(JSON.stringify(message));
       console.log(`🎮 移動: ${direction}`);
+    }
+
+    // ========== 抓取寶物控制 ==========
+    document.getElementById('btnGrab').addEventListener('click', () => {
+      if (!isLightActive) {
+        console.log('❌ 無法抓取：光線不足');
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+        return;
+      }
+      
+      sendGrab();
+      
+      // 震動回饋
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 50, 50]); // 三次短震動
+      }
+    });
+
+    // 發送抓取指令
+    function sendGrab() {
+      const message = {
+        type: 'publish',
+        topic: `ghost/grab/${DEVICE_ID}`,
+        payload: JSON.stringify({
+          device: DEVICE_ID,
+          timestamp: Date.now()
+        })
+      };
+      
+      ws.send(JSON.stringify(message));
+      console.log(`💎 嘗試抓取寶物`);
     }
     
     // ========== 啟動 ==========

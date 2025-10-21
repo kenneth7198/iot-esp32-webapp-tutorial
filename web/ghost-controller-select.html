@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>👻 選擇你的鬼魂</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #1a0033, #2d1b4e, #1a0033);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      text-shadow: 0 0 10px #ff6b00, 0 0 20px #ff6b00;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 16px;
+      color: #ffa500;
+      opacity: 0.8;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .device-button {
+      background: linear-gradient(135deg, #2d1b4e, #1a0033);
+      border: 2px solid #ff6b00;
+      border-radius: 15px;
+      padding: 30px 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);
+    }
+
+    .device-button:hover,
+    .device-button:active {
+      transform: scale(1.05);
+      box-shadow: 0 6px 25px rgba(255, 107, 0, 0.5);
+      border-color: #ffa500;
+    }
+
+    .device-icon {
+      font-size: 48px;
+      filter: drop-shadow(0 0 10px #ff6b00);
+    }
+
+    .device-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffa500;
+    }
+
+    .device-label {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: auto;
+      padding-top: 40px;
+      opacity: 0.6;
+      font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      .header h1 {
+        font-size: 28px;
+      }
+
+      .grid {
+        gap: 12px;
+      }
+
+      .device-button {
+        padding: 25px 15px;
+      }
+
+      .device-icon {
+        font-size: 36px;
+      }
+
+      .device-number {
+        font-size: 20px;
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+
+    .device-button:active .device-icon {
+      animation: pulse 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>👻 選擇你的鬼魂</h1>
+    <p>點擊一個設備開始控制</p>
+  </div>
+
+  <div class="grid" id="deviceGrid">
+    <!-- 設備按鈕將由 JavaScript 生成 -->
+  </div>
+
+  <div class="footer">
+    <p>🎃 萬聖節鬼魂迷宮遊戲 🎃</p>
+  </div>
+
+  <script>
+    // 生成 9 個設備按鈕
+    const deviceGrid = document.getElementById('deviceGrid');
+    const ghostIcons = ['👻', '🎃', '💀', '🦇', '🕷️', '🕸️', '🧛', '🧟', '👹'];
+
+    for (let i = 1; i <= 9; i++) {
+      const deviceNum = String(i).padStart(2, '0');
+      const button = document.createElement('a');
+      button.href = `#`;
+      button.className = 'device-button';
+      button.innerHTML = `
+        <div class="device-icon">${ghostIcons[i - 1]}</div>
+        <div class="device-number">設備 ${deviceNum}</div>
+        <div class="device-label">Device-${deviceNum}</div>
+      `;
+      
+      // 使用 sessionStorage 儲存設備編號
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        sessionStorage.setItem('selectedDevice', deviceNum);
+        window.location.href = 'mobile-ghost-controller.html';
+      });
+      
+      deviceGrid.appendChild(button);
+    }
+  </script>
+</body>
+</html>

@@ -14,12 +14,12 @@ const MQTT_BROKER = 'mqtt://localhost:1883';  // Mosquitto MQTT Broker
 const TOPIC_LED_CONTROL = 'sensor/LED';
 const TOPIC_LED_STATUS = 'status/led';
 
-// MIME types
+// MIME types with charset for text files
 const mimeTypes = {
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.json': 'application/json',
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.gif': 'image/gif',
@@ -29,8 +29,11 @@ const mimeTypes = {
 
 // 建立 HTTP 伺服器（提供靜態檔案）
 const httpServer = http.createServer((req, res) => {
+  // 移除 URL 查詢參數（? 之後的部分）
+  const urlWithoutQuery = req.url.split('?')[0];
+  
   // 處理根路徑
-  let filePath = req.url === '/' ? '/index.html' : req.url;
+  let filePath = urlWithoutQuery === '/' ? '/index.html' : urlWithoutQuery;
   
   // 建立完整路徑
   filePath = path.join(__dirname, '..', 'web', filePath);
@@ -43,10 +46,10 @@ const httpServer = http.createServer((req, res) => {
   fs.readFile(filePath, (err, content) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end('<h1>404 - 檔案不存在</h1>', 'utf-8');
       } else {
-        res.writeHead(500);
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end(`伺服器錯誤: ${err.code}`, 'utf-8');
       }
     } else {
@@ -110,6 +113,13 @@ mqttClient.on('connect', () => {
   mqttClient.subscribe('ghost/move/#', (err) => {
     if (!err) {
       console.log('[MQTT] 已訂閱主題: ghost/move/#');
+    }
+  });
+  
+  // 訂閱抓取寶物指令
+  mqttClient.subscribe('ghost/grab/#', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: ghost/grab/#');
     }
   });
   
@@ -287,6 +297,8 @@ mqttClient.on('message', (topic, payload) => {
     console.log(`[MQTT] 💡 ${topic}`);
   } else if (topic.includes('/move')) {
     console.log(`[MQTT] 🎮 ${topic}: ${payloadStr}`);
+  } else if (topic.includes('/grab')) {
+    console.log(`[MQTT] 💎 ${topic}: ${payloadStr}`);
   } else {
     console.log(`[MQTT] 收到訊息 ${topic}:`, payloadStr);
   }

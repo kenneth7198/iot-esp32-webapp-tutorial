@@ -1,6 +1,8 @@
 *.md
 web/index.html
 *.sh
+*.txt
+_tmp/
 # Node.js
 node_modules/
 npm-debug.log*

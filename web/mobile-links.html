@@ -142,16 +142,23 @@
     <div class="instruction">
       <h3>📱 使用說明</h3>
       <ol>
-        <li>點擊下方對應的玩家編號連結</li>
+        <li>點擊下方「統一選擇頁面」或對應的玩家編號連結</li>
         <li>或複製網址傳送給其他玩家</li>
         <li>用手機瀏覽器開啟連結</li>
-        <li>用手電筒照亮 ESP32</li>
-        <li>左右搖動手機 3 次啟動</li>
+        <li>用手電筒照亮 ESP32（按鈕會自動啟用）</li>
+        <li>點擊方向按鈕控制鬼魂移動</li>
       </ol>
     </div>
 
     <div class="link-section">
-      <h3 style="color: #ffaa00; margin-bottom: 15px;">選擇玩家編號</h3>
+      <h3 style="color: #ffaa00; margin-bottom: 15px;">推薦：統一選擇頁面</h3>
+      
+      <a href="ghost-controller-select.html" class="device-link" style="background: linear-gradient(145deg, rgba(255, 107, 0, 0.5), rgba(255, 107, 0, 0.3)); border-width: 3px;">
+        <span class="device-icon">🎯</span>
+        <span>統一選擇頁面（推薦）</span>
+      </a>
+
+      <h3 style="color: #ffaa00; margin: 25px 0 15px 0;">或直接選擇設備</h3>
       
       <a href="mobile-ghost-controller.html?device=01" class="device-link">
         <span class="device-icon">👻</span>
@@ -200,11 +207,14 @@
     </div>
 
     <div class="instruction">
-      <h3>🔗 完整網址</h3>
+      <h3>🔗 推薦網址</h3>
       <div class="url-display" id="baseUrl">
-        http://192.168.100.200:8081/mobile-ghost-controller.html?device=01
+        http://192.168.100.200:8081/ghost-controller-select.html
       </div>
       <button class="copy-btn" onclick="copyUrl()">📋 複製網址</button>
+      <p style="margin-top: 10px; font-size: 14px; color: #ffa500;">
+        ⭐ 此網址可讓玩家自行選擇設備，不需要指定參數
+      </p>
     </div>
 
     <div class="instruction">
@@ -212,8 +222,8 @@
       <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
         <li>✅ 確保手機和伺服器在同一個 WiFi（NetArt）</li>
         <li>✅ ESP32 的光敏電阻需要連接到 GPIO 34</li>
-        <li>✅ 用手電筒照亮光敏電阻才能啟動</li>
-        <li>✅ 每個玩家使用不同的 device 編號</li>
+        <li>✅ 用手電筒照亮光敏電阻，控制按鈕會自動啟用</li>
+        <li>✅ 每個玩家選擇不同的設備編號</li>
       </ul>
     </div>
   </div>

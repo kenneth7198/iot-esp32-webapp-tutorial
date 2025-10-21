@@ -194,6 +194,33 @@
       color: #ffaa00;
     }
 
+    .game-info {
+      background: rgba(255, 107, 0, 0.2);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      text-align: center;
+      border: 2px solid #ff6b00;
+    }
+
+    .timer {
+      font-size: 32px;
+      font-weight: bold;
+      color: #ffaa00;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px #ff6b00;
+    }
+
+    .timer.warning {
+      color: #ff0000;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
     .ghost-status {
       margin: 10px 0;
       padding: 10px;
@@ -215,11 +242,66 @@
     .ghost-status-name {
       font-weight: bold;
       margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ghost-score {
+      font-size: 16px;
+      color: #ffaa00;
+      font-weight: bold;
     }
 
     .ghost-status-info {
       font-size: 12px;
       opacity: 0.8;
+    }
+
+    .treasure {
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 45;
+      animation: treasure-glow 2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes treasure-glow {
+      0%, 100% { 
+        transform: translate(-50%, -50%) scale(1);
+        filter: drop-shadow(0 0 5px gold);
+      }
+      50% { 
+        transform: translate(-50%, -50%) scale(1.2);
+        filter: drop-shadow(0 0 20px gold);
+      }
+    }
+
+    .collision-effect {
+      position: fixed;
+      font-size: 48px;
+      z-index: 999;
+      animation: collision-pop 1s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes collision-pop {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0);
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.5);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5) translateY(-100px);
+      }
     }
 
     .connection-indicator {
@@ -254,6 +336,42 @@
       50% { opacity: 0.3; }
     }
 
+    .music-control {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: 2px solid #ff6b00;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+
+    .music-control:hover {
+      background: rgba(255, 107, 0, 0.3);
+      transform: scale(1.05);
+    }
+
+    .music-icon {
+      font-size: 20px;
+      animation: pulse-music 2s infinite;
+    }
+
+    .music-control.muted .music-icon {
+      animation: none;
+      opacity: 0.5;
+    }
+
+    @keyframes pulse-music {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
     .instructions {
       position: fixed;
       top: 120px;
@@ -283,6 +401,50 @@
 
     .instructions-link {
       display: none; /* 隱藏手機控制器按鈕 */
+    }
+
+    .youtube-player {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 320px;
+      height: 180px;
+      border: 3px solid #ff6b00;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(255, 107, 0, 0.5);
+      z-index: 100;
+      background: #000;
+    }
+
+    .youtube-player iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .youtube-toggle {
+      position: fixed;
+      bottom: 210px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #ff6b00;
+      border-radius: 10px;
+      padding: 8px 15px;
+      cursor: pointer;
+      color: #ffaa00;
+      font-size: 14px;
+      transition: all 0.3s;
+      z-index: 101;
+    }
+
+    .youtube-toggle:hover {
+      background: rgba(255, 107, 0, 0.3);
+      transform: scale(1.05);
+    }
+
+    .youtube-player.hidden {
+      display: none;
     }
 
     /* 滾動條樣式 */
@@ -384,8 +546,18 @@
       <span id="connectionText">連接中...</span>
     </div>
 
+    <!-- 音樂控制 -->
+    <div class="music-control" id="musicControl" title="點擊開啟/關閉音樂">
+      <span class="music-icon">🎵</span>
+      <span id="musicText">點擊播放</span>
+    </div>
+
     <!-- 狀態面板 -->
     <div class="status-panel">
+      <div class="game-info">
+        <div class="timer" id="timer">03:00</div>
+        <div style="font-size: 14px; color: #fff;">⏰ 剩餘時間</div>
+      </div>
       <div class="status-title">👻 鬼魂狀態</div>
       <div id="ghostStatusList"></div>
     </div>
@@ -396,10 +568,25 @@
       <div class="instructions-text">
         1. 用手電筒照亮 ESP32 光敏電阻<br>
         2. 手機開啟控制器網頁<br>
-        3. 左右搖動手機 3 次啟動<br>
+        3. 光線充足後自動啟動控制<br>
         4. 使用方向鍵控制鬼魂移動<br>
-        5. 光線不足時無法移動
+        5. 按下 💎 按鈕抓取寶物<br>
+        6. 避免碰撞，搶奪寶物得分
       </div>
+    </div>
+
+    <!-- YouTube 音樂播放器切換按鈕 -->
+    <div class="youtube-toggle" id="youtubeToggle">
+      🎵 顯示/隱藏音樂
+    </div>
+
+    <!-- YouTube 音樂播放器 -->
+    <div class="youtube-player" id="youtubePlayer">
+      <iframe 
+        src="https://www.youtube.com/embed/wTZZNpuZYTI?autoplay=1&loop=1&playlist=wTZZNpuZYTI&controls=1" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowfullscreen>
+      </iframe>
     </div>
   </div>
 
@@ -411,6 +598,11 @@
     const MAZE_SIZE = 10;
     const CELL_SIZE = 60;
     const LIGHT_THRESHOLD = 3000;
+    const GAME_DURATION = 180; // 3分鐘 = 180秒
+    const COLLISION_PENALTY = -100; // 碰撞扣分
+    const TREASURE_REWARD = 500; // 寶物加分
+    const MIN_TREASURES = 10;
+    const MAX_TREASURES = 15;
 
     // 鬼魂顏色
     const GHOST_COLORS = [
@@ -423,7 +615,11 @@
 
     // ========== 狀態 ==========
     let ws = null;
-    const ghosts = new Map();  // device-01 -> {x, y, light, active, element}
+    const ghosts = new Map();  // device-01 -> {x, y, light, active, element, score}
+    const treasures = []; // [{x, y, element}]
+    let gameTimer = GAME_DURATION;
+    let gameInterval = null;
+    let gameStarted = false;
 
     // ========== DOM 元素 ==========
     const mazeContainerEl = document.getElementById('mazeContainer');
@@ -431,6 +627,16 @@
     const connectionDotEl = document.getElementById('connectionDot');
     const connectionTextEl = document.getElementById('connectionText');
     const ghostStatusListEl = document.getElementById('ghostStatusList');
+    const timerEl = document.getElementById('timer');
+    const musicControlEl = document.getElementById('musicControl');
+    const musicTextEl = document.getElementById('musicText');
+    const youtubePlayerEl = document.getElementById('youtubePlayer');
+    const youtubeToggleEl = document.getElementById('youtubeToggle');
+    
+    let isMusicPlaying = false;
+    let audioContext = null;
+    let bgMusicOscillator = null;
+    let isYoutubeVisible = true;
 
     // ========== 初始化迷宮 ==========
     function initMaze() {
@@ -464,13 +670,76 @@
           active: false,
           color: GHOST_COLORS[i - 1],
           emoji: GHOST_EMOJIS[i - 1],
-          element: null
+          element: null,
+          score: 0 // 新增分數
         };
         
         ghosts.set(deviceId, ghost);
         createGhostElement(ghost);
         createGhostStatus(ghost);
       }
+    }
+
+    // ========== 初始化寶物 ==========
+    function initTreasures() {
+      const treasureCount = Math.floor(Math.random() * (MAX_TREASURES - MIN_TREASURES + 1)) + MIN_TREASURES;
+      const usedPositions = new Set();
+      
+      // 記錄鬼魂初始位置，避免重疊
+      ghosts.forEach(ghost => {
+        usedPositions.add(`${ghost.x},${ghost.y}`);
+      });
+      
+      for (let i = 0; i < treasureCount; i++) {
+        let x, y, posKey;
+        let attempts = 0;
+        
+        // 尋找不重疊的位置
+        do {
+          x = Math.floor(Math.random() * MAZE_SIZE);
+          y = Math.floor(Math.random() * MAZE_SIZE);
+          posKey = `${x},${y}`;
+          attempts++;
+        } while (usedPositions.has(posKey) && attempts < 100);
+        
+        if (attempts < 100) {
+          usedPositions.add(posKey);
+          
+          const treasure = { x, y, element: null };
+          createTreasureElement(treasure);
+          treasures.push(treasure);
+        }
+      }
+      
+      console.log(`💎 生成了 ${treasures.length} 個寶物`);
+    }
+
+    // ========== 建立寶物元素 ==========
+    function createTreasureElement(treasure) {
+      const treasureEl = document.createElement('div');
+      treasureEl.className = 'treasure';
+      treasureEl.innerHTML = '💎';
+      treasureEl.style.position = 'fixed';
+      treasureEl.style.zIndex = '45';
+      
+      treasure.element = treasureEl;
+      document.body.appendChild(treasureEl);
+      
+      updateTreasurePosition(treasure);
+    }
+
+    // ========== 更新寶物位置 ==========
+    function updateTreasurePosition(treasure) {
+      const gridRect = mazeGridEl.getBoundingClientRect();
+      const cellWidth = gridRect.width / MAZE_SIZE;
+      const cellHeight = gridRect.height / MAZE_SIZE;
+      
+      const x = gridRect.left + (treasure.x + 0.5) * cellWidth;
+      const y = gridRect.top + (treasure.y + 0.5) * cellHeight;
+      
+      treasure.element.style.left = `${x}px`;
+      treasure.element.style.top = `${y}px`;
+      treasure.element.style.transform = `translate(-50%, -50%)`;
     }
 
     // ========== 建立鬼魂元素 ==========
@@ -527,7 +796,8 @@
       statusEl.id = `status-${ghost.device}`;
       statusEl.innerHTML = `
         <div class="ghost-status-name" style="color: ${ghost.color};">
-          ${ghost.emoji} ${ghost.device.split('-')[2]}
+          <span>${ghost.emoji} ${ghost.device.split('-')[2]}</span>
+          <span class="ghost-score" id="score-${ghost.device}">0分</span>
         </div>
         <div class="ghost-status-info">
           💡 光線: <span id="light-${ghost.device}">0</span><br>
@@ -536,6 +806,22 @@
         </div>
       `;
       ghostStatusListEl.appendChild(statusEl);
+    }
+
+    // ========== 更新分數 ==========
+    function updateScore(deviceId, points, reason) {
+      const ghost = ghosts.get(deviceId);
+      if (!ghost) return;
+      
+      ghost.score += points;
+      
+      // 更新顯示
+      const scoreEl = document.getElementById(`score-${deviceId}`);
+      if (scoreEl) {
+        scoreEl.textContent = `${ghost.score}分`;
+      }
+      
+      console.log(`💰 ${deviceId} ${reason}: ${points > 0 ? '+' : ''}${points}分（總分: ${ghost.score}）`);
     }
 
     // ========== 更新鬼魂狀態 ==========
@@ -618,6 +904,118 @@
       
       // 更新狀態面板
       document.getElementById(`pos-${deviceId}`).textContent = `${ghost.x}, ${ghost.y}`;
+      
+      // 檢查碰撞
+      checkCollisions(deviceId);
+    }
+
+    // ========== 檢查碰撞 ==========
+    function checkCollisions(movedGhostId) {
+      const movedGhost = ghosts.get(movedGhostId);
+      if (!movedGhost || !movedGhost.active) return;
+
+      // 檢查與其他鬼魂的碰撞
+      ghosts.forEach((otherGhost, otherId) => {
+        if (otherId !== movedGhostId && 
+            otherGhost.active && 
+            otherGhost.x === movedGhost.x && 
+            otherGhost.y === movedGhost.y) {
+          
+          // 兩個鬼魂都是顯示狀態，發生碰撞
+          console.log(`💥 碰撞！${movedGhostId} 與 ${otherId}`);
+          
+          // 兩個都扣分
+          updateScore(movedGhostId, COLLISION_PENALTY, '鬼魂碰撞');
+          updateScore(otherId, COLLISION_PENALTY, '鬼魂碰撞');
+          
+          // 顯示碰撞效果
+          showCollisionEffect(movedGhost);
+        }
+      });
+    }
+
+    // ========== 顯示碰撞效果 ==========
+    function showCollisionEffect(ghost) {
+      const effectEl = document.createElement('div');
+      effectEl.className = 'collision-effect';
+      effectEl.innerHTML = '💥';
+      effectEl.style.color = '#ff0000';
+      
+      const gridRect = mazeGridEl.getBoundingClientRect();
+      const cellWidth = gridRect.width / MAZE_SIZE;
+      const cellHeight = gridRect.height / MAZE_SIZE;
+      
+      const x = gridRect.left + (ghost.x + 0.5) * cellWidth;
+      const y = gridRect.top + (ghost.y + 0.5) * cellHeight;
+      
+      effectEl.style.position = 'fixed';
+      effectEl.style.left = `${x}px`;
+      effectEl.style.top = `${y}px`;
+      
+      document.body.appendChild(effectEl);
+      
+      // 1秒後移除
+      setTimeout(() => {
+        effectEl.remove();
+      }, 1000);
+    }
+
+    // ========== 抓取寶物 ==========
+    function grabTreasure(deviceId) {
+      const ghost = ghosts.get(deviceId);
+      if (!ghost || !ghost.active) {
+        console.log(`❌ ${deviceId} 無法抓取寶物（未激活）`);
+        return;
+      }
+
+      // 查找當前位置是否有寶物
+      const treasureIndex = treasures.findIndex(t => 
+        t.x === ghost.x && t.y === ghost.y
+      );
+
+      if (treasureIndex !== -1) {
+        // 找到寶物！
+        const treasure = treasures[treasureIndex];
+        
+        console.log(`🎉 ${deviceId} 抓到寶物！位置: (${treasure.x}, ${treasure.y})`);
+        
+        // 加分
+        updateScore(deviceId, TREASURE_REWARD, '抓取寶物');
+        
+        // 移除寶物
+        treasure.element.remove();
+        treasures.splice(treasureIndex, 1);
+        
+        // 顯示寶物獲得效果
+        showTreasureEffect(ghost);
+      } else {
+        console.log(`❌ ${deviceId} 這裡沒有寶物`);
+      }
+    }
+
+    // ========== 顯示寶物獲得效果 ==========
+    function showTreasureEffect(ghost) {
+      const effectEl = document.createElement('div');
+      effectEl.className = 'collision-effect';
+      effectEl.innerHTML = `+${TREASURE_REWARD}💎`;
+      effectEl.style.color = '#ffd700';
+      
+      const gridRect = mazeGridEl.getBoundingClientRect();
+      const cellWidth = gridRect.width / MAZE_SIZE;
+      const cellHeight = gridRect.height / MAZE_SIZE;
+      
+      const x = gridRect.left + (ghost.x + 0.5) * cellWidth;
+      const y = gridRect.top + (ghost.y + 0.5) * cellHeight;
+      
+      effectEl.style.position = 'fixed';
+      effectEl.style.left = `${x}px`;
+      effectEl.style.top = `${y}px`;
+      
+      document.body.appendChild(effectEl);
+      
+      setTimeout(() => {
+        effectEl.remove();
+      }, 1000);
     }
 
     // ========== WebSocket 連接 ==========
@@ -643,6 +1041,12 @@
           ws.send(JSON.stringify({
             type: 'subscribe',
             topic: `ghost/move/${deviceId}`
+          }));
+          
+          // 訂閱抓取寶物指令
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            topic: `ghost/grab/${deviceId}`
           }));
         }
       };
@@ -678,12 +1082,75 @@
         const payload = JSON.parse(data.payload);
         const deviceId = payload.device;
         updateGhostStatus(deviceId, payload);
+        
+        // 第一次有鬼魂激活時開始遊戲
+        if (!gameStarted && payload.active) {
+          startGame();
+        }
       } else if (data.topic.includes('ghost/move/')) {
         // 移動指令
         const payload = JSON.parse(data.payload);
         const deviceId = payload.device;
         const direction = payload.direction;
         moveGhost(deviceId, direction);
+      } else if (data.topic.includes('ghost/grab/')) {
+        // 抓取寶物指令
+        const payload = JSON.parse(data.payload);
+        const deviceId = payload.device;
+        grabTreasure(deviceId);
+      }
+    }
+
+    // ========== 開始遊戲 ==========
+    function startGame() {
+      if (gameStarted) return;
+      
+      gameStarted = true;
+      console.log('🎮 遊戲開始！');
+      
+      // 開始倒計時
+      gameInterval = setInterval(() => {
+        gameTimer--;
+        updateTimer();
+        
+        if (gameTimer <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    // ========== 更新計時器 ==========
+    function updateTimer() {
+      const minutes = Math.floor(gameTimer / 60);
+      const seconds = gameTimer % 60;
+      const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      timerEl.textContent = timeStr;
+      
+      // 最後30秒變紅色警告
+      if (gameTimer <= 30) {
+        timerEl.classList.add('warning');
+      }
+    }
+
+    // ========== 結束遊戲 ==========
+    function endGame() {
+      clearInterval(gameInterval);
+      gameStarted = false;
+      
+      console.log('⏰ 遊戲結束！');
+      
+      // 計算最終排名
+      const rankings = Array.from(ghosts.values())
+        .sort((a, b) => b.score - a.score)
+        .map((ghost, index) => `${index + 1}. ${ghost.device.split('-')[2]} - ${ghost.score}分`)
+        .join('\n');
+      
+      alert(`🏁 遊戲結束！\n\n最終排名：\n${rankings}`);
+      
+      // 可選：重新開始遊戲
+      if (confirm('是否重新開始遊戲？')) {
+        location.reload();
       }
     }
 
@@ -692,11 +1159,210 @@
       ghosts.forEach(ghost => {
         updateGhostPosition(ghost);
       });
+      treasures.forEach(treasure => {
+        updateTreasurePosition(treasure);
+      });
     });
+
+    // ========== 音樂控制 ==========
+    // 使用 Web Audio API 生成豐富的萬聖節氛圍音效
+    function createSpookyAmbience() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const nodes = [];
+
+      // 1. 低頻不安感基底（深沉的無調音）
+      const bass1 = audioContext.createOscillator();
+      const bass2 = audioContext.createOscillator();
+      const bassGain = audioContext.createGain();
+      
+      bass1.type = 'sine';
+      bass1.frequency.setValueAtTime(55, audioContext.currentTime); // A1
+      bass2.type = 'sine';
+      bass2.frequency.setValueAtTime(58.27, audioContext.currentTime); // A#1 (不協和音程)
+      
+      bassGain.gain.setValueAtTime(0.08, audioContext.currentTime);
+      
+      bass1.connect(bassGain);
+      bass2.connect(bassGain);
+      bassGain.connect(audioContext.destination);
+      
+      nodes.push({ osc: bass1 }, { osc: bass2 });
+
+      // 2. 中頻詭異音效（模擬風聲）
+      const wind = audioContext.createOscillator();
+      const windGain = audioContext.createGain();
+      const windFilter = audioContext.createBiquadFilter();
+      
+      wind.type = 'sawtooth';
+      wind.frequency.setValueAtTime(220, audioContext.currentTime);
+      
+      windFilter.type = 'lowpass';
+      windFilter.frequency.setValueAtTime(400, audioContext.currentTime);
+      windFilter.Q.setValueAtTime(5, audioContext.currentTime);
+      
+      windGain.gain.setValueAtTime(0.03, audioContext.currentTime);
+      
+      // 風聲的顫動效果
+      const windLFO = audioContext.createOscillator();
+      const windLFOGain = audioContext.createGain();
+      windLFO.frequency.setValueAtTime(0.3, audioContext.currentTime);
+      windLFOGain.gain.setValueAtTime(100, audioContext.currentTime);
+      
+      windLFO.connect(windLFOGain);
+      windLFOGain.connect(wind.frequency);
+      
+      wind.connect(windFilter);
+      windFilter.connect(windGain);
+      windGain.connect(audioContext.destination);
+      
+      nodes.push({ osc: wind }, { osc: windLFO });
+
+      // 3. 高頻詭異音效（像是遠處的尖叫）
+      const eerie = audioContext.createOscillator();
+      const eerieGain = audioContext.createGain();
+      const eerieFilter = audioContext.createBiquadFilter();
+      
+      eerie.type = 'triangle';
+      eerie.frequency.setValueAtTime(880, audioContext.currentTime);
+      
+      eerieFilter.type = 'bandpass';
+      eerieFilter.frequency.setValueAtTime(1200, audioContext.currentTime);
+      eerieFilter.Q.setValueAtTime(10, audioContext.currentTime);
+      
+      eerieGain.gain.setValueAtTime(0.02, audioContext.currentTime);
+      
+      // 高頻的慢速顫動
+      const eerieLFO = audioContext.createOscillator();
+      const eerieLFOGain = audioContext.createGain();
+      eerieLFO.frequency.setValueAtTime(0.2, audioContext.currentTime);
+      eerieLFOGain.gain.setValueAtTime(200, audioContext.currentTime);
+      
+      eerieLFO.connect(eerieLFOGain);
+      eerieLFOGain.connect(eerie.frequency);
+      
+      eerie.connect(eerieFilter);
+      eerieFilter.connect(eerieGain);
+      eerieGain.connect(audioContext.destination);
+      
+      nodes.push({ osc: eerie }, { osc: eerieLFO });
+
+      // 4. 低頻脈衝（心跳感）
+      const pulse = audioContext.createOscillator();
+      const pulseGain = audioContext.createGain();
+      
+      pulse.type = 'sine';
+      pulse.frequency.setValueAtTime(110, audioContext.currentTime);
+      
+      pulseGain.gain.setValueAtTime(0, audioContext.currentTime);
+      
+      // 創建心跳節奏
+      const now = audioContext.currentTime;
+      for (let i = 0; i < 100; i++) {
+        const time = now + i * 2; // 每2秒一次
+        pulseGain.gain.setValueAtTime(0, time);
+        pulseGain.gain.linearRampToValueAtTime(0.15, time + 0.1);
+        pulseGain.gain.linearRampToValueAtTime(0, time + 0.3);
+        pulseGain.gain.setValueAtTime(0, time + 0.4);
+        pulseGain.gain.linearRampToValueAtTime(0.12, time + 0.5);
+        pulseGain.gain.linearRampToValueAtTime(0, time + 0.7);
+      }
+      
+      pulse.connect(pulseGain);
+      pulseGain.connect(audioContext.destination);
+      
+      nodes.push({ osc: pulse });
+
+      // 5. 白噪音（像是老舊收音機的雜訊）
+      const bufferSize = 2 * audioContext.sampleRate;
+      const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+      
+      const whiteNoise = audioContext.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
+      
+      const noiseFilter = audioContext.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.setValueAtTime(200, audioContext.currentTime);
+      
+      const noiseGain = audioContext.createGain();
+      noiseGain.gain.setValueAtTime(0.01, audioContext.currentTime);
+      
+      whiteNoise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioContext.destination);
+      
+      nodes.push({ osc: whiteNoise });
+
+      // 啟動所有音效
+      nodes.forEach(node => node.osc.start());
+      
+      console.log('🎃 萬聖節音效層次：低音基底 + 風聲 + 詭異高音 + 心跳 + 白噪音');
+      
+      return nodes;
+    }
+
+    function stopSpookyAmbience() {
+      if (bgMusicOscillator) {
+        try {
+          bgMusicOscillator.forEach(node => {
+            try {
+              node.osc.stop();
+            } catch (e) {
+              // 已經停止
+            }
+          });
+        } catch (e) {
+          console.log('音樂已停止');
+        }
+        bgMusicOscillator = null;
+      }
+    }
+
+    musicControlEl.addEventListener('click', () => {
+      if (isMusicPlaying) {
+        stopSpookyAmbience();
+        musicControlEl.classList.add('muted');
+        musicTextEl.textContent = '已靜音';
+        isMusicPlaying = false;
+        console.log('🔇 音樂已暫停');
+      } else {
+        try {
+          bgMusicOscillator = createSpookyAmbience();
+          musicControlEl.classList.remove('muted');
+          musicTextEl.textContent = '播放中';
+          isMusicPlaying = true;
+          console.log('� 萬聖節氛圍音效播放中');
+        } catch (err) {
+          console.error('❌ 音樂播放失敗:', err);
+          musicTextEl.textContent = '播放失敗';
+          alert('音樂播放失敗: ' + err.message);
+        }
+      }
+    });
+    
+    // YouTube 播放器顯示/隱藏切換
+    youtubeToggleEl.addEventListener('click', () => {
+      isYoutubeVisible = !isYoutubeVisible;
+      if (isYoutubeVisible) {
+        youtubePlayerEl.classList.remove('hidden');
+      } else {
+        youtubePlayerEl.classList.add('hidden');
+      }
+    });
+    
+    console.log('🎵 音樂系統已初始化（Web Audio API + YouTube），請點擊右上角按鈕播放');
 
     // ========== 啟動 ==========
     initMaze();
     initGhosts();
+    initTreasures();
     connectWebSocket();
   </script>
 </body>

@@ -144,19 +144,11 @@
 
     <div class="grid" id="qrGrid"></div>
 
-    <div class="instruction">
-      <h2>📱 使用說明</h2>
-      <ol>
-        <li><strong>每個玩家掃描對應的 QR Code</strong>（玩家 1 掃描 Device-01，玩家 2 掃描 Device-02...）</li>
-        <li><strong>用手電筒照亮 ESP32</strong> 的光敏電阻（連接在 GPIO 34）</li>
-        <li><strong>左右搖動手機 3 次</strong> 啟動控制器（手機會震動回饋）</li>
-        <li><strong>使用方向鍵</strong> ⬆️⬇️⬅️➡️ 控制你的鬼魂在迷宮中移動</li>
-        <li><strong>保持手電筒照亮</strong>，光線不足時無法移動！</li>
-      </ol>
-    </div>
+    
   </div>
 
   <script>
+    const SELECT_URL = 'http://192.168.100.200:8081/ghost-controller-select.html';
     const BASE_URL = 'http://192.168.100.200:8081/mobile-ghost-controller.html';
     
     const devices = [
@@ -198,6 +190,32 @@
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H
       });
+    });
+
+    // 新增：統一選擇頁面的 QR Code
+    const selectCard = document.createElement('div');
+    selectCard.className = 'qr-card';
+    selectCard.style.gridColumn = 'span 3';
+    selectCard.style.background = 'rgba(255, 107, 0, 0.2)';
+    selectCard.innerHTML = `
+      <div class="qr-icon">🎯</div>
+      <div class="qr-title">統一選擇頁面（推薦）</div>
+      <div class="qr-code" id="qr-select"></div>
+      <div class="qr-url">${SELECT_URL}</div>
+      <a href="${SELECT_URL}" class="open-btn" target="_blank">🔗 開啟選擇頁面</a>
+      <div style="margin-top: 15px; color: #ffa500; font-size: 14px;">
+        ⭐ 推薦使用此 QR Code，進入後可選擇任意設備
+      </div>
+    `;
+    qrGrid.insertBefore(selectCard, qrGrid.firstChild);
+    
+    new QRCode(document.getElementById('qr-select'), {
+      text: SELECT_URL,
+      width: 200,
+      height: 200,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
     });
   </script>
 </body>
