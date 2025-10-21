@@ -98,6 +98,27 @@ mqttClient.on('connect', () => {
       console.log(`[MQTT] 已訂閱主題: ${TOPIC_LED_STATUS}`);
     }
   });
+  
+  // 訂閱所有 ESP32 設備的光線數據
+  mqttClient.subscribe('esp32/+/light', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/+/light');
+    }
+  });
+  
+  // 訂閱所有鬼魂移動指令
+  mqttClient.subscribe('ghost/move/#', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: ghost/move/#');
+    }
+  });
+  
+  // 訂閱觸控數據
+  mqttClient.subscribe('esp32/+/touch', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/+/touch');
+    }
+  });
 });
 
 mqttClient.on('error', (err) => {
@@ -142,6 +163,28 @@ wss.on('connection', (ws, req) => {
         case 'shake_detected':
           // 處理搖晃事件
           handleShakeEvent(message);
+          break;
+
+        case 'subscribe':
+          // 動態訂閱 MQTT 主題
+          if (message.topic) {
+            mqttClient.subscribe(message.topic, (err) => {
+              if (!err) {
+                console.log(`[MQTT] 客戶端訂閱: ${message.topic}`);
+              }
+            });
+          }
+          break;
+
+        case 'publish':
+          // 發布 MQTT 訊息（用於鬼魂移動等）
+          if (message.topic && message.payload) {
+            mqttClient.publish(message.topic, message.payload, { qos: 1 }, (err) => {
+              if (!err) {
+                console.log(`[MQTT] 發布到 ${message.topic}`);
+              }
+            });
+          }
           break;
 
         default:
@@ -237,13 +280,22 @@ function broadcast(data) {
 
 // 接收來自 MQTT 的訊息（ESP32 狀態更新）
 mqttClient.on('message', (topic, payload) => {
-  console.log(`[MQTT] 收到訊息 ${topic}:`, payload.toString());
+  const payloadStr = payload.toString();
+  
+  // 簡化日誌輸出（光線數據頻繁，不完整顯示）
+  if (topic.includes('/light')) {
+    console.log(`[MQTT] 💡 ${topic}`);
+  } else if (topic.includes('/move')) {
+    console.log(`[MQTT] 🎮 ${topic}: ${payloadStr}`);
+  } else {
+    console.log(`[MQTT] 收到訊息 ${topic}:`, payloadStr);
+  }
   
   // 轉發給所有 WebSocket 客戶端
   broadcast({
     type: 'mqtt_message',
     topic: topic,
-    payload: payload.toString(),
+    payload: payloadStr,
     timestamp: new Date().toISOString()
   });
 });

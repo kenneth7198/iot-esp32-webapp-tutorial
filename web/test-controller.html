@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔧 控制器測試頁面</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #000;
+      color: #0f0;
+      padding: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    h1 {
+      color: #ff6b00;
+      text-align: center;
+    }
+    
+    .test-section {
+      background: #111;
+      border: 2px solid #0f0;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    
+    .test-title {
+      color: #ffaa00;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .success {
+      color: #0f0;
+    }
+    
+    .error {
+      color: #f00;
+    }
+    
+    .warning {
+      color: #ffaa00;
+    }
+    
+    button {
+      background: #ff6b00;
+      border: none;
+      color: #000;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    button:active {
+      background: #ffaa00;
+    }
+    
+    #log {
+      background: #000;
+      border: 1px solid #333;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    
+    .log-entry {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 手機控制器診斷工具</h1>
+
+  <div class="test-section">
+    <div class="test-title">📱 基本資訊</div>
+    <div id="basicInfo"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">🌐 網路連接測試</div>
+    <div>
+      <button onclick="testWebSocket()">測試 WebSocket</button>
+      <button onclick="testHTTP()">測試 HTTP</button>
+    </div>
+    <div id="networkResult"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">📡 感測器測試</div>
+    <div>
+      <button onclick="testMotion()">測試搖動偵測</button>
+      <button onclick="testOrientation()">測試方向感測</button>
+    </div>
+    <div id="sensorResult"></div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">🎮 控制器測試</div>
+    <div>
+      <button onclick="openController()">開啟控制器</button>
+      <button onclick="window.location.reload()">重新載入</button>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <div class="test-title">📋 即時日誌</div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // ========== 基本資訊 ==========
+    function displayBasicInfo() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const deviceNumber = urlParams.get('device') || '01';
+      const deviceId = `esp32-device-${deviceNumber}`;
+      
+      const info = `
+        <div class="success">✅ 頁面已載入</div>
+        <div>🆔 Device ID: ${deviceId}</div>
+        <div>📱 User Agent: ${navigator.userAgent}</div>
+        <div>🌐 URL: ${window.location.href}</div>
+        <div>🔧 視窗大小: ${window.innerWidth} x ${window.innerHeight}</div>
+      `;
+      
+      document.getElementById('basicInfo').innerHTML = info;
+      addLog('✅ 基本資訊載入完成');
+    }
+
+    // ========== WebSocket 測試 ==========
+    async function testWebSocket() {
+      addLog('🔄 開始測試 WebSocket...');
+      const result = document.getElementById('networkResult');
+      
+      try {
+        const ws = new WebSocket('ws://192.168.100.200:8080');
+        
+        ws.onopen = () => {
+          result.innerHTML = '<div class="success">✅ WebSocket 連接成功！</div>';
+          addLog('✅ WebSocket 連接成功');
+          ws.close();
+        };
+        
+        ws.onerror = (error) => {
+          result.innerHTML = `<div class="error">❌ WebSocket 連接失敗</div><div>錯誤: ${error}</div>`;
+          addLog('❌ WebSocket 連接失敗');
+        };
+        
+        ws.onclose = () => {
+          addLog('🔌 WebSocket 已關閉');
+        };
+        
+        setTimeout(() => {
+          if (ws.readyState !== WebSocket.OPEN) {
+            result.innerHTML = '<div class="error">❌ WebSocket 連接逾時</div>';
+            addLog('❌ WebSocket 連接逾時');
+            ws.close();
+          }
+        }, 5000);
+        
+      } catch (error) {
+        result.innerHTML = `<div class="error">❌ 發生錯誤: ${error.message}</div>`;
+        addLog(`❌ 錯誤: ${error.message}`);
+      }
+    }
+
+    // ========== HTTP 測試 ==========
+    async function testHTTP() {
+      addLog('🔄 開始測試 HTTP...');
+      const result = document.getElementById('networkResult');
+      
+      try {
+        const response = await fetch('http://192.168.100.200:8081/mobile-ghost-controller.html');
+        
+        if (response.ok) {
+          result.innerHTML = `
+            <div class="success">✅ HTTP 連接成功！</div>
+            <div>狀態碼: ${response.status}</div>
+            <div>Content-Type: ${response.headers.get('content-type')}</div>
+          `;
+          addLog('✅ HTTP 連接成功');
+        } else {
+          result.innerHTML = `<div class="error">❌ HTTP 錯誤: ${response.status}</div>`;
+          addLog(`❌ HTTP 錯誤: ${response.status}`);
+        }
+      } catch (error) {
+        result.innerHTML = `<div class="error">❌ 無法連接到伺服器: ${error.message}</div>`;
+        addLog(`❌ 無法連接: ${error.message}`);
+      }
+    }
+
+    // ========== 搖動感測器測試 ==========
+    function testMotion() {
+      addLog('🔄 開始測試搖動感測器...');
+      const result = document.getElementById('sensorResult');
+      
+      if (window.DeviceMotionEvent) {
+        // 檢查是否需要權限
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+          DeviceMotionEvent.requestPermission()
+            .then(permissionState => {
+              if (permissionState === 'granted') {
+                startMotionTest(result);
+              } else {
+                result.innerHTML = '<div class="error">❌ 權限被拒絕</div>';
+                addLog('❌ 動作感測器權限被拒絕');
+              }
+            })
+            .catch(error => {
+              result.innerHTML = `<div class="error">❌ 權限請求失敗: ${error}</div>`;
+              addLog(`❌ 權限請求失敗: ${error}`);
+            });
+        } else {
+          startMotionTest(result);
+        }
+      } else {
+        result.innerHTML = '<div class="error">❌ 此裝置不支援動作感測器</div>';
+        addLog('❌ 不支援動作感測器');
+      }
+    }
+
+    function startMotionTest(result) {
+      result.innerHTML = '<div class="success">✅ 動作感測器已啟動，請搖動手機...</div><div id="motionData"></div>';
+      addLog('✅ 動作感測器已啟動');
+      
+      let shakeCount = 0;
+      const motionDataEl = document.getElementById('motionData');
+      
+      const handler = (event) => {
+        const acc = event.accelerationIncludingGravity;
+        const x = acc.x.toFixed(2);
+        const y = acc.y.toFixed(2);
+        const z = acc.z.toFixed(2);
+        
+        motionDataEl.innerHTML = `
+          <div>X: ${x}</div>
+          <div>Y: ${y}</div>
+          <div>Z: ${z}</div>
+          <div class="warning">搖動次數: ${shakeCount}</div>
+        `;
+        
+        if (Math.abs(acc.x) > 15) {
+          shakeCount++;
+          addLog(`📳 偵測到搖動 (${shakeCount})`);
+          if (navigator.vibrate) {
+            navigator.vibrate(100);
+          }
+        }
+      };
+      
+      window.addEventListener('devicemotion', handler);
+      
+      setTimeout(() => {
+        window.removeEventListener('devicemotion', handler);
+        result.innerHTML += '<div class="success">✅ 測試完成</div>';
+        addLog('✅ 動作感測器測試完成');
+      }, 10000);
+    }
+
+    // ========== 方向感測器測試 ==========
+    function testOrientation() {
+      addLog('🔄 開始測試方向感測器...');
+      const result = document.getElementById('sensorResult');
+      
+      if (window.DeviceOrientationEvent) {
+        result.innerHTML = '<div class="success">✅ 方向感測器已啟動</div><div id="orientationData"></div>';
+        addLog('✅ 方向感測器已啟動');
+        
+        const orientationDataEl = document.getElementById('orientationData');
+        
+        const handler = (event) => {
+          orientationDataEl.innerHTML = `
+            <div>Alpha: ${event.alpha?.toFixed(2) || 'N/A'}</div>
+            <div>Beta: ${event.beta?.toFixed(2) || 'N/A'}</div>
+            <div>Gamma: ${event.gamma?.toFixed(2) || 'N/A'}</div>
+          `;
+        };
+        
+        window.addEventListener('deviceorientation', handler);
+        
+        setTimeout(() => {
+          window.removeEventListener('deviceorientation', handler);
+          result.innerHTML += '<div class="success">✅ 測試完成</div>';
+          addLog('✅ 方向感測器測試完成');
+        }, 5000);
+      } else {
+        result.innerHTML = '<div class="error">❌ 此裝置不支援方向感測器</div>';
+        addLog('❌ 不支援方向感測器');
+      }
+    }
+
+    // ========== 開啟控制器 ==========
+    function openController() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const device = urlParams.get('device') || '01';
+      const url = `mobile-ghost-controller.html?device=${device}`;
+      addLog(`🎮 開啟控制器: ${url}`);
+      window.location.href = url;
+    }
+
+    // ========== 日誌系統 ==========
+    function addLog(message) {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.insertBefore(entry, logDiv.firstChild);
+      console.log(message);
+    }
+
+    // ========== 初始化 ==========
+    window.addEventListener('DOMContentLoaded', () => {
+      addLog('🚀 診斷工具啟動');
+      displayBasicInfo();
+    });
+
+    window.addEventListener('error', (event) => {
+      addLog(`❌ JavaScript 錯誤: ${event.message}`);
+    });
+  </script>
+</body>
+</html>

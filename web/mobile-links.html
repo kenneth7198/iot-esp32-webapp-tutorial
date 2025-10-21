@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📱 手機控制器連結</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #1a0033, #2d1b4e);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #ff6b00;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      color: #ff6b00;
+      text-shadow: 0 0 20px #ff6b00;
+      margin-bottom: 20px;
+    }
+
+    .qr-section {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+
+    .qr-code {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+      border-radius: 5px;
+    }
+
+    .link-section {
+      margin: 30px 0;
+    }
+
+    .device-link {
+      display: block;
+      background: linear-gradient(145deg, rgba(255, 107, 0, 0.3), rgba(255, 107, 0, 0.2));
+      border: 2px solid #ff6b00;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px 0;
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.3s;
+      font-size: 18px;
+    }
+
+    .device-link:hover, .device-link:active {
+      background: linear-gradient(145deg, rgba(255, 107, 0, 0.5), rgba(255, 107, 0, 0.3));
+      transform: scale(1.05);
+    }
+
+    .device-icon {
+      font-size: 24px;
+      margin-right: 10px;
+    }
+
+    .copy-btn {
+      background: #ff6b00;
+      border: none;
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .copy-btn:hover {
+      background: #ffaa00;
+      transform: scale(1.05);
+    }
+
+    .instruction {
+      background: rgba(255, 107, 0, 0.1);
+      border-left: 4px solid #ff6b00;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: left;
+      border-radius: 5px;
+    }
+
+    .instruction h3 {
+      color: #ffaa00;
+      margin-bottom: 10px;
+    }
+
+    .instruction ol {
+      margin-left: 20px;
+      line-height: 1.8;
+    }
+
+    .url-display {
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      word-break: break-all;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>👻 鬼魂控制器連結</h1>
+
+    <div class="instruction">
+      <h3>📱 使用說明</h3>
+      <ol>
+        <li>點擊下方對應的玩家編號連結</li>
+        <li>或複製網址傳送給其他玩家</li>
+        <li>用手機瀏覽器開啟連結</li>
+        <li>用手電筒照亮 ESP32</li>
+        <li>左右搖動手機 3 次啟動</li>
+      </ol>
+    </div>
+
+    <div class="link-section">
+      <h3 style="color: #ffaa00; margin-bottom: 15px;">選擇玩家編號</h3>
+      
+      <a href="mobile-ghost-controller.html?device=01" class="device-link">
+        <span class="device-icon">👻</span>
+        <span>玩家 1 (Device-01)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=02" class="device-link">
+        <span class="device-icon">🎃</span>
+        <span>玩家 2 (Device-02)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=03" class="device-link">
+        <span class="device-icon">🦇</span>
+        <span>玩家 3 (Device-03)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=04" class="device-link">
+        <span class="device-icon">💀</span>
+        <span>玩家 4 (Device-04)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=05" class="device-link">
+        <span class="device-icon">🕷️</span>
+        <span>玩家 5 (Device-05)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=06" class="device-link">
+        <span class="device-icon">🕸️</span>
+        <span>玩家 6 (Device-06)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=07" class="device-link">
+        <span class="device-icon">🧛</span>
+        <span>玩家 7 (Device-07)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=08" class="device-link">
+        <span class="device-icon">🧟</span>
+        <span>玩家 8 (Device-08)</span>
+      </a>
+
+      <a href="mobile-ghost-controller.html?device=09" class="device-link">
+        <span class="device-icon">👹</span>
+        <span>玩家 9 (Device-09)</span>
+      </a>
+    </div>
+
+    <div class="instruction">
+      <h3>🔗 完整網址</h3>
+      <div class="url-display" id="baseUrl">
+        http://192.168.100.200:8081/mobile-ghost-controller.html?device=01
+      </div>
+      <button class="copy-btn" onclick="copyUrl()">📋 複製網址</button>
+    </div>
+
+    <div class="instruction">
+      <h3>⚠️ 注意事項</h3>
+      <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
+        <li>✅ 確保手機和伺服器在同一個 WiFi（NetArt）</li>
+        <li>✅ ESP32 的光敏電阻需要連接到 GPIO 34</li>
+        <li>✅ 用手電筒照亮光敏電阻才能啟動</li>
+        <li>✅ 每個玩家使用不同的 device 編號</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function copyUrl() {
+      const url = document.getElementById('baseUrl').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('✅ 網址已複製到剪貼簿！');
+      }).catch(err => {
+        console.error('複製失敗:', err);
+        alert('❌ 複製失敗，請手動複製');
+      });
+    }
+  </script>
+</body>
+</html>

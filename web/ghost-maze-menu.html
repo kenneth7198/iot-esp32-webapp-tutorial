@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎃 萬聖節鬼屋迷宮 - 主選單</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #1a0033, #2d1b4e);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 48px;
+      color: #ff6b00;
+      text-shadow: 0 0 20px #ff6b00;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 18px;
+      color: #ffa500;
+      opacity: 0.8;
+    }
+
+    .section {
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #ff6b00;
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 28px;
+      color: #ffaa00;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+    }
+
+    .link-card {
+      background: linear-gradient(145deg, rgba(255, 107, 0, 0.1), rgba(255, 107, 0, 0.05));
+      border: 2px solid rgba(255, 107, 0, 0.3);
+      border-radius: 10px;
+      padding: 20px;
+      transition: all 0.3s;
+      text-decoration: none;
+      color: #fff;
+      display: block;
+    }
+
+    .link-card:hover {
+      background: linear-gradient(145deg, rgba(255, 107, 0, 0.3), rgba(255, 107, 0, 0.2));
+      border-color: #ff6b00;
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(255, 107, 0, 0.5);
+    }
+
+    .link-icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+
+    .link-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #ffaa00;
+    }
+
+    .link-desc {
+      font-size: 14px;
+      opacity: 0.8;
+      line-height: 1.5;
+    }
+
+    .instructions {
+      background: rgba(255, 107, 0, 0.1);
+      border-left: 4px solid #ff6b00;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    .instructions h3 {
+      color: #ffaa00;
+      margin-bottom: 10px;
+    }
+
+    .instructions ol {
+      margin-left: 20px;
+      line-height: 1.8;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #f00;
+      animation: blink 1s infinite;
+    }
+
+    .status-dot.connected {
+      background: #0f0;
+      animation: none;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .code-block {
+      background: #000;
+      border: 1px solid #333;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #0f0;
+      overflow-x: auto;
+    }
+
+    .warning {
+      background: rgba(255, 0, 0, 0.1);
+      border: 2px solid #f00;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .warning-icon {
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎃 萬聖節鬼屋迷宮 👻</h1>
+      <p>用手電筒喚醒你的鬼魂，探索黑暗迷宮</p>
+    </div>
+
+    <!-- 伺服器狀態 -->
+    <div class="section">
+      <div class="section-title">🖥️ 伺服器狀態</div>
+      <div class="status">
+        <div class="status-dot" id="serverStatus"></div>
+        <span id="serverText">檢查中...</span>
+      </div>
+      
+      <div class="instructions">
+        <h3>啟動伺服器</h3>
+        <div class="code-block">
+# 終端機執行：
+cd /Users/kennethliu/Documents/GitHub/iot-esp32-webapp-tutorial
+node server/websocket-server.js
+        </div>
+      </div>
+    </div>
+
+    <!-- 鬼屋迷宮主畫面 -->
+    <div class="section">
+      <div class="section-title">🏚️ 鬼屋迷宮主畫面（伺服器端）</div>
+      <div class="links-grid">
+        <a href="ghost-maze.html" class="link-card" target="_blank">
+          <div class="link-icon">🏚️</div>
+          <div class="link-title">鬼屋迷宮</div>
+          <div class="link-desc">在大螢幕上觀看所有鬼魂的移動</div>
+        </a>
+      </div>
+      
+      <div class="instructions">
+        <h3>📺 使用說明</h3>
+        <ol>
+          <li>在主電腦（192.168.100.200）上開啟此頁面</li>
+          <li>投影到大螢幕，讓所有玩家都能看到</li>
+          <li>觀察 9 個鬼魂的位置和狀態</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- 手機控制器 -->
+    <div class="section">
+      <div class="section-title">📱 手機控制器（玩家端）</div>
+      
+      <div class="warning">
+        <div class="warning-icon">⚠️</div>
+        <div>
+          <strong>每個玩家使用不同的編號！</strong><br>
+          請將對應的連結傳送給各玩家
+        </div>
+      </div>
+
+      <div class="links-grid">
+        <a href="mobile-ghost-controller.html?device=01" class="link-card" target="_blank">
+          <div class="link-icon">👻</div>
+          <div class="link-title">玩家 1 控制器</div>
+          <div class="link-desc">ESP32-Device-01 / IP .201</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=02" class="link-card" target="_blank">
+          <div class="link-icon">🎃</div>
+          <div class="link-title">玩家 2 控制器</div>
+          <div class="link-desc">ESP32-Device-02 / IP .202</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=03" class="link-card" target="_blank">
+          <div class="link-icon">🦇</div>
+          <div class="link-title">玩家 3 控制器</div>
+          <div class="link-desc">ESP32-Device-03 / IP .203</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=04" class="link-card" target="_blank">
+          <div class="link-icon">💀</div>
+          <div class="link-title">玩家 4 控制器</div>
+          <div class="link-desc">ESP32-Device-04 / IP .204</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=05" class="link-card" target="_blank">
+          <div class="link-icon">🕷️</div>
+          <div class="link-title">玩家 5 控制器</div>
+          <div class="link-desc">ESP32-Device-05 / IP .205</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=06" class="link-card" target="_blank">
+          <div class="link-icon">🕸️</div>
+          <div class="link-title">玩家 6 控制器</div>
+          <div class="link-desc">ESP32-Device-06 / IP .206</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=07" class="link-card" target="_blank">
+          <div class="link-icon">🧛</div>
+          <div class="link-title">玩家 7 控制器</div>
+          <div class="link-desc">ESP32-Device-07 / IP .207</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=08" class="link-card" target="_blank">
+          <div class="link-icon">🧟</div>
+          <div class="link-title">玩家 8 控制器</div>
+          <div class="link-desc">ESP32-Device-08 / IP .208</div>
+        </a>
+
+        <a href="mobile-ghost-controller.html?device=09" class="link-card" target="_blank">
+          <div class="link-icon">👹</div>
+          <div class="link-title">玩家 9 控制器</div>
+          <div class="link-desc">ESP32-Device-09 / IP .209</div>
+        </a>
+      </div>
+
+      <div class="instructions">
+        <h3>📱 操作步驟</h3>
+        <ol>
+          <li><strong>用手電筒照亮 ESP32</strong> 的光敏電阻（GPIO34）</li>
+          <li><strong>左右搖動手機 3 次</strong> 啟動控制器</li>
+          <li><strong>使用方向鍵</strong> ⬆️⬇️⬅️➡️ 控制鬼魂移動</li>
+          <li><strong>光線不足時無法移動</strong>，記得保持手電筒照亮！</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- ESP32 配置 -->
+    <div class="section">
+      <div class="section-title">🔧 ESP32 配置</div>
+      
+      <div class="instructions">
+        <h3>硬體連接</h3>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>📍 <strong>光敏電阻</strong>: GPIO 34 (ADC1)</li>
+          <li>📍 <strong>WiFi</strong>: NetArt</li>
+          <li>📍 <strong>固定 IP</strong>: 192.168.100.201 ~ 209</li>
+        </ul>
+
+        <h3 style="margin-top: 20px;">程式上傳</h3>
+        <ol>
+          <li>開啟 <code>esp32-light-sensor.ino</code></li>
+          <li>修改 DEVICE_ID 和 local_IP</li>
+          <li>上傳到 ESP32</li>
+          <li>用手電筒測試光線感應</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- 其他功能 -->
+    <div class="section">
+      <div class="section-title">🎮 其他功能</div>
+      <div class="links-grid">
+        <a href="rhythm-game.html" class="link-card" target="_blank">
+          <div class="link-icon">🎵</div>
+          <div class="link-title">節奏遊戲</div>
+          <div class="link-desc">9 軌道節奏打擊遊戲</div>
+        </a>
+
+        <a href="esp32-led-control.html" class="link-card" target="_blank">
+          <div class="link-icon">💡</div>
+          <div class="link-title">LED 控制</div>
+          <div class="link-desc">遠端控制 ESP32 LED</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 檢查 WebSocket Server 狀態
+    function checkServer() {
+      const ws = new WebSocket('ws://192.168.100.200:8080');
+      const statusDot = document.getElementById('serverStatus');
+      const statusText = document.getElementById('serverText');
+      
+      ws.onopen = () => {
+        statusDot.classList.add('connected');
+        statusText.textContent = '✅ 伺服器運行中';
+        ws.close();
+      };
+      
+      ws.onerror = () => {
+        statusDot.classList.remove('connected');
+        statusText.textContent = '❌ 伺服器未啟動，請執行 node server/websocket-server.js';
+      };
+    }
+
+    checkServer();
+    setInterval(checkServer, 5000);
+  </script>
+</body>
+</html>

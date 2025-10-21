@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎃 萬聖節鬼屋迷宮</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #ff6b00;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-right: 300px; /* 為右側狀態面板留出空間 */
+    }
+
+    .header {
+      background: linear-gradient(180deg, #1a0a00, #0a0a0a);
+      padding: 20px;
+      text-align: center;
+      border-bottom: 3px solid #ff6b00;
+      box-shadow: 0 5px 20px rgba(255, 107, 0, 0.5);
+    }
+
+    .header h1 {
+      font-size: 48px;
+      text-shadow: 0 0 20px #ff6b00, 0 0 40px #ff3300;
+      margin-bottom: 10px;
+      animation: flicker 3s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+      75% { opacity: 0.9; }
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: #ffaa00;
+      opacity: 0.8;
+    }
+
+    .maze-container {
+      flex: 1;
+      position: relative;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(255, 107, 0, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(138, 43, 226, 0.05) 0%, transparent 50%),
+        #0a0a0a;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .maze-grid {
+      width: min(calc(100vh - 200px), calc(100vw - 400px)); /* 正方形尺寸 */
+      height: min(calc(100vh - 200px), calc(100vw - 400px));
+      max-width: 800px;
+      max-height: 800px;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      gap: 2px;
+      background: rgba(20, 10, 0, 0.5);
+      border: 3px solid #ff6b00;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 0 30px rgba(255, 107, 0, 0.3);
+    }
+
+    .maze-cell {
+      background: rgba(50, 20, 0, 0.3);
+      border: 1px solid rgba(255, 107, 0, 0.2);
+      border-radius: 5px;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .maze-cell.wall {
+      background: rgba(100, 40, 0, 0.6);
+      border-color: rgba(255, 107, 0, 0.4);
+    }
+
+    .maze-cell:hover {
+      background: rgba(255, 107, 0, 0.1);
+    }
+
+    .ghost {
+      position: fixed;
+      width: 60px;
+      height: 60px;
+      font-size: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 50;
+      cursor: pointer;
+      filter: drop-shadow(0 0 10px currentColor);
+      animation: float 3s ease-in-out infinite;
+      opacity: 0;
+      transform: scale(0);
+      pointer-events: none; /* 避免遮擋點擊 */
+    }
+
+    .ghost.active {
+      opacity: 1;
+      transform: scale(1);
+      animation: float 3s ease-in-out infinite, appear 0.5s ease-out;
+    }
+
+    .ghost.hidden {
+      opacity: 0.2;
+      transform: scale(0.5);
+      filter: grayscale(100%) brightness(0.5);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-15px) scale(1.05); }
+    }
+
+    @keyframes appear {
+      from {
+        opacity: 0;
+        transform: scale(0) rotate(360deg);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+      }
+    }
+
+    .ghost-label {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+      border: 1px solid currentColor;
+    }
+
+    .ghost-light-value {
+      position: absolute;
+      bottom: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 2px 6px;
+      border-radius: 8px;
+      white-space: nowrap;
+      opacity: 0.7;
+    }
+
+    .status-panel {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      width: 280px;
+      background: rgba(0, 0, 0, 0.95);
+      border: 2px solid #ff6b00;
+      border-radius: 15px;
+      padding: 20px;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+      box-shadow: 0 0 30px rgba(255, 107, 0, 0.5);
+      z-index: 100;
+    }
+
+    .status-title {
+      font-size: 20px;
+      margin-bottom: 15px;
+      text-align: center;
+      color: #ffaa00;
+    }
+
+    .ghost-status {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(255, 107, 0, 0.1);
+      border-radius: 8px;
+      border-left: 3px solid #ff6b00;
+    }
+
+    .ghost-status.active {
+      border-left-color: #00ff00;
+      animation: glow 2s infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
+      50% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.6); }
+    }
+
+    .ghost-status-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .ghost-status-info {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .connection-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border-radius: 25px;
+      border: 2px solid #ff6b00;
+    }
+
+    .connection-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #f00;
+      box-shadow: 0 0 10px currentColor;
+      animation: blink 1s infinite;
+    }
+
+    .connection-dot.connected {
+      background: #0f0;
+      animation: none;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .instructions {
+      position: fixed;
+      top: 120px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.95);
+      border: 2px solid #ff6b00;
+      border-radius: 15px;
+      padding: 15px 20px;
+      text-align: left;
+      max-width: 280px;
+      box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+      z-index: 90;
+    }
+
+    .instructions-title {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #ffaa00;
+      font-weight: bold;
+    }
+
+    .instructions-text {
+      font-size: 13px;
+      line-height: 1.8;
+      color: #fff;
+    }
+
+    .instructions-link {
+      display: none; /* 隱藏手機控制器按鈕 */
+    }
+
+    /* 滾動條樣式 */
+    .status-panel::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .status-panel::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 10px;
+    }
+
+    .status-panel::-webkit-scrollbar-thumb {
+      background: #ff6b00;
+      border-radius: 10px;
+    }
+
+    .status-panel::-webkit-scrollbar-thumb:hover {
+      background: #ffaa00;
+    }
+
+    /* 響應式設計 */
+    @media (max-width: 1400px) {
+      .instructions {
+        font-size: 12px;
+        padding: 12px 15px;
+        max-width: 250px;
+      }
+
+      .instructions-title {
+        font-size: 14px;
+      }
+
+      .instructions-text {
+        font-size: 12px;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .container {
+        padding-right: 0;
+      }
+
+      .status-panel {
+        width: 240px;
+        padding: 15px;
+        font-size: 14px;
+      }
+
+      .maze-grid {
+        width: min(calc(100vh - 200px), calc(100vw - 300px));
+        height: min(calc(100vh - 200px), calc(100vw - 300px));
+      }
+
+      .instructions {
+        top: auto;
+        bottom: 20px;
+        left: 20px;
+        max-width: 220px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .status-panel {
+        top: auto;
+        bottom: 20px;
+        right: 20px;
+        width: 200px;
+        max-height: 40vh;
+      }
+
+      .instructions {
+        display: none; /* 小螢幕隱藏說明 */
+      }
+
+      .maze-grid {
+        width: min(calc(100vh - 150px), calc(100vw - 40px));
+        height: min(calc(100vh - 150px), calc(100vw - 40px));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 標題 -->
+    <div class="header">
+      <h1>🎃 萬聖節鬼屋迷宮 👻</h1>
+      <div class="subtitle">地下迷宮探險 - 用手電筒喚醒你的鬼魂</div>
+    </div>
+
+    <!-- 迷宮區域 -->
+    <div class="maze-container" id="mazeContainer">
+      <div class="maze-grid" id="mazeGrid"></div>
+    </div>
+
+    <!-- 連線指示器 -->
+    <div class="connection-indicator">
+      <div class="connection-dot" id="connectionDot"></div>
+      <span id="connectionText">連接中...</span>
+    </div>
+
+    <!-- 狀態面板 -->
+    <div class="status-panel">
+      <div class="status-title">👻 鬼魂狀態</div>
+      <div id="ghostStatusList"></div>
+    </div>
+
+    <!-- 操作說明 -->
+    <div class="instructions">
+      <div class="instructions-title">📱 如何操作</div>
+      <div class="instructions-text">
+        1. 用手電筒照亮 ESP32 光敏電阻<br>
+        2. 手機開啟控制器網頁<br>
+        3. 左右搖動手機 3 次啟動<br>
+        4. 使用方向鍵控制鬼魂移動<br>
+        5. 光線不足時無法移動
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
+  <script>
+    // ========== 設定 ==========
+    const WS_URL = 'ws://192.168.100.200:8080';
+    const GHOST_COUNT = 9;
+    const MAZE_SIZE = 10;
+    const CELL_SIZE = 60;
+    const LIGHT_THRESHOLD = 3000;
+
+    // 鬼魂顏色
+    const GHOST_COLORS = [
+      '#ff6b00', '#ff00ff', '#00ffff', '#ffff00', 
+      '#ff0099', '#00ff99', '#9900ff', '#ff9900', '#00ff00'
+    ];
+
+    // 鬼魂表情符號
+    const GHOST_EMOJIS = ['👻', '🎃', '🦇', '💀', '🕷️', '🕸️', '🧛', '🧟', '👹'];
+
+    // ========== 狀態 ==========
+    let ws = null;
+    const ghosts = new Map();  // device-01 -> {x, y, light, active, element}
+
+    // ========== DOM 元素 ==========
+    const mazeContainerEl = document.getElementById('mazeContainer');
+    const mazeGridEl = document.getElementById('mazeGrid');
+    const connectionDotEl = document.getElementById('connectionDot');
+    const connectionTextEl = document.getElementById('connectionText');
+    const ghostStatusListEl = document.getElementById('ghostStatusList');
+
+    // ========== 初始化迷宮 ==========
+    function initMaze() {
+      // 建立 10x10 格子
+      for (let row = 0; row < MAZE_SIZE; row++) {
+        for (let col = 0; col < MAZE_SIZE; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'maze-cell';
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          
+          // 隨機加入牆壁（20% 機率）
+          if (Math.random() < 0.2) {
+            cell.classList.add('wall');
+          }
+          
+          mazeGridEl.appendChild(cell);
+        }
+      }
+    }
+
+    // ========== 初始化鬼魂 ==========
+    function initGhosts() {
+      for (let i = 1; i <= GHOST_COUNT; i++) {
+        const deviceId = `esp32-device-${String(i).padStart(2, '0')}`;
+        const ghost = {
+          device: deviceId,
+          x: Math.floor(Math.random() * MAZE_SIZE),
+          y: Math.floor(Math.random() * MAZE_SIZE),
+          light: 0,
+          active: false,
+          color: GHOST_COLORS[i - 1],
+          emoji: GHOST_EMOJIS[i - 1],
+          element: null
+        };
+        
+        ghosts.set(deviceId, ghost);
+        createGhostElement(ghost);
+        createGhostStatus(ghost);
+      }
+    }
+
+    // ========== 建立鬼魂元素 ==========
+    function createGhostElement(ghost) {
+      const ghostEl = document.createElement('div');
+      ghostEl.className = 'ghost hidden';
+      ghostEl.innerHTML = ghost.emoji;
+      ghostEl.style.color = ghost.color;
+      ghostEl.style.position = 'fixed'; // 使用 fixed 定位
+      ghostEl.style.zIndex = '50';
+      
+      // 標籤
+      const label = document.createElement('div');
+      label.className = 'ghost-label';
+      label.textContent = ghost.device.split('-')[2];
+      label.style.color = ghost.color;
+      ghostEl.appendChild(label);
+      
+      // 光線數值
+      const lightValue = document.createElement('div');
+      lightValue.className = 'ghost-light-value';
+      lightValue.textContent = '💡 0';
+      ghostEl.appendChild(lightValue);
+      
+      ghost.element = ghostEl;
+      document.body.appendChild(ghostEl); // 附加到 body
+      
+      updateGhostPosition(ghost);
+    }
+
+    // ========== 更新鬼魂位置 ==========
+    function updateGhostPosition(ghost) {
+      const gridRect = mazeGridEl.getBoundingClientRect();
+      
+      // 計算每個格子的實際尺寸
+      const cellWidth = gridRect.width / MAZE_SIZE;
+      const cellHeight = gridRect.height / MAZE_SIZE;
+      
+      // 計算鬼魂的絕對位置（相對於視窗）
+      const x = gridRect.left + (ghost.x + 0.5) * cellWidth;
+      const y = gridRect.top + (ghost.y + 0.5) * cellHeight;
+      
+      // 設定鬼魂位置（fixed 定位）
+      ghost.element.style.position = 'fixed';
+      ghost.element.style.left = `${x}px`;
+      ghost.element.style.top = `${y}px`;
+      ghost.element.style.transform = `translate(-50%, -50%)`;
+    }
+
+    // ========== 建立鬼魂狀態顯示 ==========
+    function createGhostStatus(ghost) {
+      const statusEl = document.createElement('div');
+      statusEl.className = 'ghost-status';
+      statusEl.id = `status-${ghost.device}`;
+      statusEl.innerHTML = `
+        <div class="ghost-status-name" style="color: ${ghost.color};">
+          ${ghost.emoji} ${ghost.device.split('-')[2]}
+        </div>
+        <div class="ghost-status-info">
+          💡 光線: <span id="light-${ghost.device}">0</span><br>
+          📍 位置: (<span id="pos-${ghost.device}">0, 0</span>)<br>
+          ⚡ 狀態: <span id="active-${ghost.device}">隱藏</span>
+        </div>
+      `;
+      ghostStatusListEl.appendChild(statusEl);
+    }
+
+    // ========== 更新鬼魂狀態 ==========
+    function updateGhostStatus(deviceId, data) {
+      const ghost = ghosts.get(deviceId);
+      if (!ghost) return;
+
+      if (data.light !== undefined) {
+        ghost.light = data.light;
+        ghost.active = data.active;
+        
+        // 更新視覺
+        if (ghost.active) {
+          ghost.element.classList.remove('hidden');
+          ghost.element.classList.add('active');
+        } else {
+          ghost.element.classList.add('hidden');
+          ghost.element.classList.remove('active');
+        }
+        
+        // 更新光線數值顯示
+        const lightValueEl = ghost.element.querySelector('.ghost-light-value');
+        lightValueEl.textContent = `💡 ${ghost.light}`;
+        
+        // 更新狀態面板
+        const statusEl = document.getElementById(`status-${deviceId}`);
+        if (statusEl) {
+          if (ghost.active) {
+            statusEl.classList.add('active');
+          } else {
+            statusEl.classList.remove('active');
+          }
+          
+          document.getElementById(`light-${deviceId}`).textContent = ghost.light;
+          document.getElementById(`pos-${deviceId}`).textContent = `${ghost.x}, ${ghost.y}`;
+          document.getElementById(`active-${deviceId}`).textContent = ghost.active ? '✅ 顯示' : '❌ 隱藏';
+        }
+      }
+    }
+
+    // ========== 移動鬼魂 ==========
+    function moveGhost(deviceId, direction) {
+      const ghost = ghosts.get(deviceId);
+      if (!ghost || !ghost.active) {
+        console.log(`❌ ${deviceId} 無法移動（未激活或不存在）`);
+        return;
+      }
+
+      const oldX = ghost.x;
+      const oldY = ghost.y;
+
+      // 計算新位置
+      switch (direction) {
+        case 'up':
+          ghost.y = Math.max(0, ghost.y - 1);
+          break;
+        case 'down':
+          ghost.y = Math.min(MAZE_SIZE - 1, ghost.y + 1);
+          break;
+        case 'left':
+          ghost.x = Math.max(0, ghost.x - 1);
+          break;
+        case 'right':
+          ghost.x = Math.min(MAZE_SIZE - 1, ghost.x + 1);
+          break;
+      }
+
+      // 檢查是否碰到牆壁
+      const cell = document.querySelector(`[data-row="${ghost.y}"][data-col="${ghost.x}"]`);
+      if (cell && cell.classList.contains('wall')) {
+        // 撞牆，恢復位置
+        ghost.x = oldX;
+        ghost.y = oldY;
+        console.log(`🧱 ${deviceId} 撞牆了！`);
+        return;
+      }
+
+      console.log(`🎮 ${deviceId} 移動到 (${ghost.x}, ${ghost.y})`);
+      updateGhostPosition(ghost);
+      
+      // 更新狀態面板
+      document.getElementById(`pos-${deviceId}`).textContent = `${ghost.x}, ${ghost.y}`;
+    }
+
+    // ========== WebSocket 連接 ==========
+    function connectWebSocket() {
+      ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => {
+        console.log('✅ WebSocket 連接成功');
+        connectionDotEl.classList.add('connected');
+        connectionTextEl.textContent = '已連接';
+        
+        // 訂閱所有裝置的光線數據和移動指令
+        for (let i = 1; i <= GHOST_COUNT; i++) {
+          const deviceId = `esp32-device-${String(i).padStart(2, '0')}`;
+          
+          // 訂閱光線數據
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            topic: `esp32/${deviceId}/light`
+          }));
+          
+          // 訂閱移動指令
+          ws.send(JSON.stringify({
+            type: 'subscribe',
+            topic: `ghost/move/${deviceId}`
+          }));
+        }
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleMessage(data);
+        } catch (e) {
+          console.error('解析訊息失敗:', e);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        connectionTextEl.textContent = '連接錯誤';
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 WebSocket 已斷開，3 秒後重連...');
+        connectionDotEl.classList.remove('connected');
+        connectionTextEl.textContent = '已斷開';
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    // ========== 處理訊息 ==========
+    function handleMessage(data) {
+      if (!data.topic) return;
+
+      if (data.topic.includes('/light')) {
+        // 光線數據
+        const payload = JSON.parse(data.payload);
+        const deviceId = payload.device;
+        updateGhostStatus(deviceId, payload);
+      } else if (data.topic.includes('ghost/move/')) {
+        // 移動指令
+        const payload = JSON.parse(data.payload);
+        const deviceId = payload.device;
+        const direction = payload.direction;
+        moveGhost(deviceId, direction);
+      }
+    }
+
+    // ========== 視窗大小改變時更新位置 ==========
+    window.addEventListener('resize', () => {
+      ghosts.forEach(ghost => {
+        updateGhostPosition(ghost);
+      });
+    });
+
+    // ========== 啟動 ==========
+    initMaze();
+    initGhosts();
+    connectWebSocket();
+  </script>
+</body>
+</html>

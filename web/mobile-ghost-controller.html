@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>👻 鬼魂控制器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #1a0033, #2d1b4e, #1a0033);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      touch-action: manipulation;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .header {
+      text-align: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 2px solid #ff6b00;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      text-shadow: 0 0 10px #ff6b00, 0 0 20px #ff6b00;
+      margin-bottom: 5px;
+    }
+
+    .device-id {
+      font-size: 14px;
+      color: #ffa500;
+      opacity: 0.8;
+    }
+
+    .status-container {
+      padding: 15px;
+      text-align: center;
+    }
+
+    .status-box {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #ff6b00;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px 0;
+    }
+
+    .status-label {
+      font-size: 14px;
+      opacity: 0.7;
+      margin-bottom: 5px;
+    }
+
+    .status-value {
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 0 0 10px currentColor;
+    }
+
+    .shake-detector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .shake-count {
+      font-size: 72px;
+      font-weight: bold;
+      color: #ff6b00;
+      text-shadow: 0 0 20px #ff6b00;
+      margin: 20px 0;
+    }
+
+    .shake-instruction {
+      font-size: 18px;
+      text-align: center;
+      margin: 10px 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    .control-pad {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      display: none;
+    }
+
+    .control-pad.active {
+      display: flex;
+    }
+
+    .d-pad {
+      position: relative;
+      width: 280px;
+      height: 280px;
+    }
+
+    .btn-direction {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(145deg, #ff6b00, #cc5500);
+      border: 3px solid #fff;
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      transition: all 0.1s;
+      user-select: none;
+    }
+
+    .btn-direction:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-direction.disabled {
+      background: #555;
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-up { top: 0; left: 100px; }
+    .btn-down { bottom: 0; left: 100px; }
+    .btn-left { top: 100px; left: 0; }
+    .btn-right { top: 100px; right: 0; }
+
+    .center-status {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .light-status {
+      font-size: 48px;
+      animation: glow 2s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 10px currentColor; }
+      50% { text-shadow: 0 0 30px currentColor; }
+    }
+
+    .light-value {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    .flashlight-hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 107, 0, 0.9);
+      padding: 15px 25px;
+      border-radius: 25px;
+      font-size: 16px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      animation: bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-10px); }
+    }
+
+    .connection-status {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #f00;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .connection-status.connected {
+      background: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="connection-status" id="connectionStatus"></div>
+
+  <div class="header">
+    <h1>👻 鬼魂控制器</h1>
+    <div class="device-id" id="deviceId">Device-01</div>
+  </div>
+
+  <div class="status-container">
+    <div class="status-box">
+      <div class="status-label">WebSocket 狀態</div>
+      <div class="status-value" id="wsStatus">連接中...</div>
+    </div>
+  </div>
+
+  <!-- 搖動偵測區 -->
+  <div class="shake-detector" id="shakeDetector">
+    <div class="shake-instruction">🔦 請先用手電筒照亮光敏電阻</div>
+    <div class="shake-instruction">然後左右搖動手機 3 次啟動</div>
+    <div class="shake-count" id="shakeCount">0 / 3</div>
+    <div class="shake-instruction" style="font-size: 14px;">搖動速度越快越好！</div>
+  </div>
+
+  <!-- 方向控制區 -->
+  <div class="control-pad" id="controlPad">
+    <div class="d-pad">
+      <button class="btn-direction btn-up" data-direction="up">⬆️</button>
+      <button class="btn-direction btn-down" data-direction="down">⬇️</button>
+      <button class="btn-direction btn-left" data-direction="left">⬅️</button>
+      <button class="btn-direction btn-right" data-direction="right">➡️</button>
+      
+      <div class="center-status">
+        <div class="light-status" id="lightStatus">🌑</div>
+        <div class="light-value" id="lightValue">等待光線數據...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flashlight-hint" id="flashlightHint">
+    💡 記得用手電筒照亮光敏電阻！
+  </div>
+
+  <script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
+  <script>
+    // ========== 設定 ==========
+    const WS_URL = 'ws://192.168.100.200:8080';
+    
+    // 從 URL 參數取得 device ID，預設為 device-01
+    const urlParams = new URLSearchParams(window.location.search);
+    const DEVICE_NUMBER = urlParams.get('device') || '01';
+    const DEVICE_ID = `esp32-device-${DEVICE_NUMBER}`;
+    
+    // 光線閾值（需要與 ESP32 一致）
+    const LIGHT_THRESHOLD = 3000;
+    
+    // ========== 狀態 ==========
+    let ws = null;
+    let isActivated = false;  // 是否已啟動（搖動3次）
+    let shakeCount = 0;
+    let lastShakeTime = 0;
+    let currentLight = 0;
+    let isLightActive = false;
+    
+    // ========== DOM 元素 ==========
+    const deviceIdEl = document.getElementById('deviceId');
+    const wsStatusEl = document.getElementById('wsStatus');
+    const connectionStatusEl = document.getElementById('connectionStatus');
+    const shakeDetectorEl = document.getElementById('shakeDetector');
+    const shakeCountEl = document.getElementById('shakeCount');
+    const controlPadEl = document.getElementById('controlPad');
+    const lightStatusEl = document.getElementById('lightStatus');
+    const lightValueEl = document.getElementById('lightValue');
+    const flashlightHintEl = document.getElementById('flashlightHint');
+    
+    // ========== 初始化 ==========
+    deviceIdEl.textContent = DEVICE_ID.toUpperCase();
+    
+    // ========== WebSocket 連接 ==========
+    function connectWebSocket() {
+      ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => {
+        console.log('✅ WebSocket 連接成功');
+        wsStatusEl.textContent = '已連接';
+        wsStatusEl.style.color = '#0f0';
+        connectionStatusEl.classList.add('connected');
+        
+        // 訂閱光線數據
+        subscribeLightData();
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleMessage(data);
+        } catch (e) {
+          console.error('解析訊息失敗:', e);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        wsStatusEl.textContent = '連接錯誤';
+        wsStatusEl.style.color = '#f00';
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 WebSocket 已斷開，3 秒後重連...');
+        wsStatusEl.textContent = '已斷開';
+        wsStatusEl.style.color = '#f00';
+        connectionStatusEl.classList.remove('connected');
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+    
+    // 訂閱光線數據
+    function subscribeLightData() {
+      const subscribeMsg = {
+        type: 'subscribe',
+        topic: `esp32/${DEVICE_ID}/light`
+      };
+      ws.send(JSON.stringify(subscribeMsg));
+      console.log(`📡 訂閱主題: esp32/${DEVICE_ID}/light`);
+    }
+    
+    // 處理接收到的訊息
+    function handleMessage(data) {
+      if (data.topic && data.topic.includes('/light')) {
+        // 光線數據
+        const payload = JSON.parse(data.payload);
+        currentLight = payload.light;
+        isLightActive = payload.active;
+        
+        updateLightDisplay();
+      }
+    }
+    
+    // 更新光線顯示
+    function updateLightDisplay() {
+      lightValueEl.textContent = `光線: ${currentLight}`;
+      
+      if (isLightActive) {
+        lightStatusEl.textContent = '👻';
+        lightStatusEl.style.color = '#ffa500';
+        flashlightHintEl.style.display = 'none';
+      } else {
+        lightStatusEl.textContent = '🌑';
+        lightStatusEl.style.color = '#666';
+        flashlightHintEl.style.display = 'block';
+      }
+      
+      // 更新按鈕狀態
+      updateButtonStates();
+    }
+    
+    // 更新按鈕狀態（光線不足時禁用）
+    function updateButtonStates() {
+      const buttons = document.querySelectorAll('.btn-direction');
+      buttons.forEach(btn => {
+        if (isActivated && isLightActive) {
+          btn.classList.remove('disabled');
+        } else {
+          btn.classList.add('disabled');
+        }
+      });
+    }
+    
+    // ========== 搖動偵測 ==========
+    if (window.DeviceMotionEvent) {
+      window.addEventListener('devicemotion', handleMotion);
+    }
+    
+    function handleMotion(event) {
+      if (isActivated) return;  // 已啟動就不再偵測
+      
+      const acc = event.accelerationIncludingGravity;
+      const x = acc.x;
+      const y = acc.y;
+      const z = acc.z;
+      
+      // 計算加速度總量
+      const magnitude = Math.sqrt(x*x + y*y + z*z);
+      
+      // 偵測左右搖動（X 軸變化大）
+      const now = Date.now();
+      if (Math.abs(x) > 15 && now - lastShakeTime > 300) {
+        lastShakeTime = now;
+        shakeCount++;
+        shakeCountEl.textContent = `${shakeCount} / 3`;
+        
+        // 震動回饋
+        if (navigator.vibrate) {
+          navigator.vibrate(100);
+        }
+        
+        if (shakeCount >= 3) {
+          activateController();
+        }
+      }
+    }
+    
+    // 啟動控制器
+    function activateController() {
+      isActivated = true;
+      shakeDetectorEl.style.display = 'none';
+      controlPadEl.classList.add('active');
+      
+      console.log('🎮 控制器已啟動！');
+      
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+      }
+    }
+    
+    // ========== 方向控制 ==========
+    document.querySelectorAll('.btn-direction').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!isActivated || !isLightActive) {
+          console.log('❌ 無法移動：未啟動或光線不足');
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+          return;
+        }
+        
+        const direction = btn.dataset.direction;
+        sendMove(direction);
+        
+        // 震動回饋
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      });
+    });
+    
+    // 發送移動指令
+    function sendMove(direction) {
+      const message = {
+        type: 'publish',
+        topic: `ghost/move/${DEVICE_ID}`,
+        payload: JSON.stringify({
+          device: DEVICE_ID,
+          direction: direction,
+          timestamp: Date.now()
+        })
+      };
+      
+      ws.send(JSON.stringify(message));
+      console.log(`🎮 移動: ${direction}`);
+    }
+    
+    // ========== 啟動 ==========
+    connectWebSocket();
+    
+    // 請求動作感測器權限（iOS 13+）
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            console.log('✅ 動作感測器權限已授予');
+          }
+        })
+        .catch(console.error);
+    }
+  </script>
+</body>
+</html>
