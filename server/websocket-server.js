@@ -123,6 +123,13 @@ mqttClient.on('connect', () => {
     }
   });
   
+  // 訂閱藝術按鈕
+  mqttClient.subscribe('art/button/#', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: art/button/#');
+    }
+  });
+  
   // 訂閱觸控數據
   mqttClient.subscribe('esp32/+/touch', (err) => {
     if (!err) {
@@ -299,6 +306,8 @@ mqttClient.on('message', (topic, payload) => {
     console.log(`[MQTT] 🎮 ${topic}: ${payloadStr}`);
   } else if (topic.includes('/grab')) {
     console.log(`[MQTT] 💎 ${topic}: ${payloadStr}`);
+  } else if (topic.includes('art/button')) {
+    console.log(`[MQTT] 🎨 ${topic}: ${payloadStr}`);
   } else {
     console.log(`[MQTT] 收到訊息 ${topic}:`, payloadStr);
   }
