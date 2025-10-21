@@ -5,29 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ESP32 MQTT 控制台（手機可用）</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    body { padding: 1rem; }
-    .log { height: 200px; overflow:auto; background:#111; color:#0f0; font-family: monospace; padding:8px; }
+    body { 
+      padding: 1rem; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    .log { 
+      height: 200px; 
+      overflow:auto; 
+      background:#111; 
+      color:#0f0; 
+      font-family: monospace; 
+      padding:12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .card {
+      border: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    h3 {
+      color: #1f2937;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
-<div class="container">
-  <h3 class="mb-3">ESP32 MQTT 控制台</h3>
+<div class="container mt-3">
+  <h3 class="mb-4 text-center">
+    <i class="fas fa-microchip"></i> ESP32 MQTT 控制台
+  </h3>
   <div class="row g-3">
     <div class="col-12 col-md-6">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title">連線設定</h5>
+          <h5 class="card-title"><i class="fas fa-plug"></i> 連線設定</h5>
           <div class="mb-2">
             <label class="form-label">WebSocket URL</label>
-            <input id="wsUrl" class="form-control" placeholder="ws://localhost:9001" value="ws://localhost:9001" />
+            <input id="wsUrl" class="form-control" placeholder="ws://192.168.100.200:9001" value="ws://192.168.100.200:9001" />
+            <small class="text-muted">Mosquitto WebSocket 端口: 9001</small>
           </div>
           <div class="mb-2">
             <label class="form-label">裝置 ID</label>
-            <input id="deviceId" class="form-control" placeholder="esp32-01" value="esp32-01" />
+            <input id="deviceId" class="form-control" placeholder="ESP32_LED_Control" value="ESP32_LED_Control" />
           </div>
-          <button id="btnConnect" class="btn btn-primary">Connect</button>
-          <button id="btnDisconnect" class="btn btn-outline-secondary">Disconnect</button>
+          <button id="btnConnect" class="btn btn-primary">
+            <i class="fas fa-link"></i> Connect
+          </button>
+          <button id="btnDisconnect" class="btn btn-outline-secondary">
+            <i class="fas fa-unlink"></i> Disconnect
+          </button>
         </div>
       </div>
     </div>
@@ -35,19 +70,20 @@
     <div class="col-12 col-md-6">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title">控制</h5>
+          <h5 class="card-title"><i class="fas fa-gamepad"></i> 控制</h5>
           <div class="input-group mb-2">
             <span class="input-group-text">LED</span>
             <select id="ledVal" class="form-select">
-              <option value="1">ON</option>
-              <option value="0">OFF</option>
+              <option value="on">ON</option>
+              <option value="off">OFF</option>
             </select>
             <button id="btnSendLed" class="btn btn-success">Send</button>
           </div>
+          <small class="text-muted d-block mb-2">發送到主題: sensor/LED</small>
           <div class="input-group">
             <span class="input-group-text">自訂 Topic</span>
             <input id="pubTopic" class="form-control" placeholder="test/topic" />
-            <input id="pubPayload" class="form-control" placeholder='{"hello":1}' />
+            <input id="pubPayload" class="form-control" placeholder='{"msg":"hello"}' />
             <button id="btnPub" class="btn btn-secondary">Publish</button>
           </div>
         </div>
@@ -57,10 +93,11 @@
     <div class="col-12">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title">訊息</h5>
+          <h5 class="card-title"><i class="fas fa-terminal"></i> 訊息日誌</h5>
           <div class="mb-2">
             <label class="form-label">訂閱 Topic（以逗號分隔）</label>
-            <input id="subTopics" class="form-control" value="iot/+/+/sensor/+,iot/+/+/status" />
+            <input id="subTopics" class="form-control" value="sensor/LED,status/led" />
+            <small class="text-muted">預設訂閱 ESP32 相關主題</small>
             <button id="btnSub" class="btn btn-outline-primary mt-2">Subscribe</button>
           </div>
           <pre class="log" id="log"></pre>
@@ -76,11 +113,27 @@ const log = (s) => { const el = document.getElementById('log'); el.textContent +
 
 document.getElementById('btnConnect').onclick = () => {
   const url = document.getElementById('wsUrl').value.trim();
+  if (!url) {
+    log('[ERROR] 請輸入 WebSocket URL');
+    return;
+  }
+  log(`[連線] 正在連接到 ${url}...`);
   client = mqtt.connect(url);
-  client.on('connect', () => log('[WS] connected'));
-  client.on('reconnect', () => log('[WS] reconnect'));
-  client.on('error', (e) => log('[WS] error: ' + e.message));
-  client.on('message', (t, p) => log(`[MSG] ${t} : ${p}`));
+  client.on('connect', () => {
+    log('[✓] MQTT 連線成功！');
+    // 自動訂閱預設主題
+    const defaultTopics = ['sensor/LED', 'status/led'];
+    defaultTopics.forEach(topic => {
+      client.subscribe(topic, (err) => {
+        if (!err) log(`[SUB] 已訂閱: ${topic}`);
+      });
+    });
+  });
+  client.on('reconnect', () => log('[WS] 重新連線中...'));
+  client.on('error', (e) => log('[ERROR] ' + e.message));
+  client.on('offline', () => log('[!] 離線'));
+  client.on('close', () => log('[X] 連線已關閉'));
+  client.on('message', (t, p) => log(`[收到] ${t} : ${p.toString()}`));
 };
 
 // 手機搖晃偵測（DeviceMotion）
@@ -90,39 +143,56 @@ window.addEventListener('devicemotion', function(e) {
   if (!acc) return;
   const mag = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
   const now = Date.now();
-  if (mag > 18 && now - lastShake > 2000) { // 阈值與防抖
+  if (mag > 18 && now - lastShake > 2000) { // 閾值與防抖
     lastShake = now;
     if (client && client.connected) {
-      const dev = document.getElementById('deviceId').value.trim();
-      const topic = `iot/lab/${dev}/cmd/led`;
-      const payload = JSON.stringify({ cmd: 'led', value: 1, ts: Date.now(), source: 'shake' });
+      const topic = 'sensor/LED';
+      const payload = JSON.stringify({ GPIO23: 'on' });  // 搖晃時自動開啟 LED
       client.publish(topic, payload, { qos: 1 });
       log(`[SHAKE] ${topic} : ${payload}`);
     }
   }
 });
 
-document.getElementById('btnDisconnect').onclick = () => { if (client) client.end(); };
+document.getElementById('btnDisconnect').onclick = () => { 
+  if (client) {
+    client.end();
+    log('[斷線] 已中斷連線');
+  }
+};
 
 document.getElementById('btnSub').onclick = () => {
-  if (!client) return;
+  if (!client || !client.connected) {
+    log('[ERROR] 尚未連線！');
+    return;
+  }
   const list = document.getElementById('subTopics').value.split(',').map(s => s.trim()).filter(Boolean);
-  list.forEach(tp => client.subscribe(tp, err => log(err ? `[SUB] fail: ${tp}` : `[SUB] ok: ${tp}`)));
+  list.forEach(tp => client.subscribe(tp, err => log(err ? `[SUB] 失敗: ${tp}` : `[SUB] 成功: ${tp}`)));
 };
 
 document.getElementById('btnSendLed').onclick = () => {
-  if (!client) return;
-  const dev = document.getElementById('deviceId').value.trim();
-  const topic = `iot/lab/${dev}/cmd/led`;
-  const payload = JSON.stringify({ cmd: 'led', value: Number(document.getElementById('ledVal').value), ts: Date.now() });
+  if (!client || !client.connected) {
+    log('[ERROR] 尚未連線！');
+    return;
+  }
+  const topic = 'sensor/LED';  // ESP32 訂閱的主題
+  const ledValue = document.getElementById('ledVal').value;
+  const payload = JSON.stringify({ GPIO23: ledValue });
   client.publish(topic, payload, { qos: 1 });
   log(`[PUB] ${topic} : ${payload}`);
 };
 
 document.getElementById('btnPub').onclick = () => {
-  if (!client) return;
+  if (!client || !client.connected) {
+    log('[ERROR] 尚未連線！');
+    return;
+  }
   const tp = document.getElementById('pubTopic').value.trim();
   const pl = document.getElementById('pubPayload').value;
+  if (!tp) {
+    log('[ERROR] 請輸入主題！');
+    return;
+  }
   client.publish(tp, pl);
   log(`[PUB] ${tp} : ${pl}`);
 };

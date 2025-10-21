@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 節奏音樂遊戲 - 9 Keys</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 遊戲區域 */
+    #gameArea {
+      flex: 1;
+      position: relative;
+      background: linear-gradient(180deg, #0f0f1e 0%, #1a1a2e 100%);
+      overflow: hidden;
+    }
+
+    /* 音符軌道容器 */
+    #tracks {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 900px;
+      height: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 2px;
+    }
+
+    /* 單一軌道 */
+    .track {
+      flex: 1;
+      position: relative;
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* 軌道分數顯示 */
+    .track-score {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: #ffd700;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-align: center;
+      min-width: 60px;
+      z-index: 10;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .track-score .score-num {
+      font-size: 1.1rem;
+      display: block;
+      color: #ffd700;
+    }
+
+    .track-score .accuracy {
+      font-size: 0.7rem;
+      color: #aaa;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* 音符 */
+    .note {
+      position: absolute;
+      width: 100%;
+      height: 60px;
+      border-radius: 8px;
+      transition: all 0.1s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    /* 觸發區（底部判定區） */
+    .hit-zone {
+      position: absolute;
+      bottom: 80px;
+      left: 0;
+      width: 100%;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: rgba(255, 255, 255, 0.5);
+      transition: all 0.2s ease;
+    }
+
+    .hit-zone.active {
+      background: rgba(255, 215, 0, 0.3);
+      border-color: #ffd700;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      transform: scale(1.05);
+    }
+
+    .hit-zone.perfect {
+      background: rgba(0, 255, 0, 0.3);
+      border-color: #00ff00;
+    }
+
+    .hit-zone.good {
+      background: rgba(255, 215, 0, 0.3);
+      border-color: #ffd700;
+    }
+
+    .hit-zone.miss {
+      background: rgba(255, 0, 0, 0.3);
+      border-color: #ff0000;
+    }
+
+    /* 判定文字 */
+    .judgment {
+      position: absolute;
+      bottom: 200px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 3rem;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+      animation: judgmentFade 0.8s ease-out forwards;
+      pointer-events: none;
+    }
+
+    .judgment.perfect { color: #00ff00; text-shadow: 0 0 30px #00ff00; }
+    .judgment.good { color: #ffd700; text-shadow: 0 0 30px #ffd700; }
+    .judgment.miss { color: #ff0000; text-shadow: 0 0 30px #ff0000; }
+
+    @keyframes judgmentFade {
+      0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-50px); }
+    }
+
+    /* 控制面板 */
+    #controlPanel {
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      color: white;
+    }
+
+    #scoreBoard {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .score-item {
+      text-align: center;
+    }
+
+    .score-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #ffd700;
+    }
+
+    .score-label {
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    /* 設備狀態指示器 */
+    #deviceStatus {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .device-indicator {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #333;
+      border: 2px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: #aaa;
+    }
+
+    .device-indicator.connected {
+      background: #00ff00;
+      border-color: #00ff00;
+      color: white;
+      box-shadow: 0 0 10px #00ff00;
+    }
+
+    .device-indicator.active {
+      animation: pulse 0.3s ease;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+    }
+
+    /* 按鈕樣式 */
+    .game-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .game-btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* 顏色配置（9個軌道） */
+    .track:nth-child(1) .note { background: linear-gradient(180deg, #e74c3c, #c0392b); }
+    .track:nth-child(2) .note { background: linear-gradient(180deg, #3498db, #2980b9); }
+    .track:nth-child(3) .note { background: linear-gradient(180deg, #f1c40f, #f39c12); }
+    .track:nth-child(4) .note { background: linear-gradient(180deg, #2ecc71, #27ae60); }
+    .track:nth-child(5) .note { background: linear-gradient(180deg, #9b59b6, #8e44ad); }
+    .track:nth-child(6) .note { background: linear-gradient(180deg, #e67e22, #d35400); }
+    .track:nth-child(7) .note { background: linear-gradient(180deg, #1abc9c, #16a085); }
+    .track:nth-child(8) .note { background: linear-gradient(180deg, #34495e, #2c3e50); }
+    .track:nth-child(9) .note { background: linear-gradient(180deg, #ff69b4, #ff1493); }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <!-- 遊戲區域 -->
+    <div id="gameArea">
+      <div id="tracks">
+        <!-- 9 個軌道將由 JavaScript 動態生成 -->
+      </div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div id="controlPanel">
+      <!-- 分數板 -->
+      <div id="scoreBoard">
+        <div class="score-item">
+          <div class="score-value" id="score">0</div>
+          <div class="score-label">分數</div>
+        </div>
+        <div class="score-item">
+          <div class="score-value" id="combo">0</div>
+          <div class="score-label">連擊</div>
+        </div>
+        <div class="score-item">
+          <div class="score-value" id="accuracy">100%</div>
+          <div class="score-label">準確度</div>
+        </div>
+      </div>
+
+      <!-- 設備狀態 -->
+      <div id="deviceStatus"></div>
+
+      <!-- 控制按鈕 -->
+      <div class="d-flex justify-content-center gap-2 mt-3">
+        <button id="btnConnect" class="game-btn btn-primary">
+          <i class="fas fa-link"></i> 連線 MQTT
+        </button>
+        <button id="btnStart" class="game-btn btn-success" disabled>
+          <i class="fas fa-play"></i> 開始遊戲
+        </button>
+        <button id="btnPause" class="game-btn btn-warning" disabled>
+          <i class="fas fa-pause"></i> 暫停
+        </button>
+        <button id="btnReset" class="game-btn btn-danger">
+          <i class="fas fa-redo"></i> 重置
+        </button>
+        <button id="btnMusic" class="game-btn btn-info">
+          <i class="fas fa-music"></i> <span id="musicStatus">開啟音樂</span>
+        </button>
+      </div>
+
+      <!-- 音樂控制 -->
+      <div class="d-flex justify-content-center align-items-center gap-3 mt-2">
+        <label class="text-white small">
+          <i class="fas fa-volume-up"></i> 音量
+        </label>
+        <input type="range" id="volumeSlider" class="form-range" 
+               style="width: 150px;" min="0" max="100" value="70">
+        <span class="text-white small" id="volumeValue">70%</span>
+        
+        <label class="text-white small ms-3">
+          <i class="fas fa-drum"></i> BPM
+        </label>
+        <input type="number" id="bpmInput" class="form-control form-control-sm" 
+               style="width: 80px;" min="60" max="200" value="120">
+      </div>
+
+      <!-- 遊戲難度設定 -->
+      <div class="d-flex justify-content-center align-items-center gap-3 mt-2">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="speedVariation" checked>
+          <label class="form-check-label text-white small" for="speedVariation">
+            <i class="fas fa-tachometer-alt"></i> 速度變化
+          </label>
+        </div>
+        
+        <label class="text-white small ms-2">
+          <i class="fas fa-arrow-down"></i> 最小速度
+        </label>
+        <input type="number" id="minSpeed" class="form-control form-control-sm" 
+               style="width: 70px;" min="0.5" max="3" step="0.1" value="1.2">
+        
+        <label class="text-white small">
+          <i class="fas fa-arrow-down"></i> 最大速度
+        </label>
+        <input type="number" id="maxSpeed" class="form-control form-control-sm" 
+               style="width: 70px;" min="1" max="5" step="0.1" value="2.5">
+        
+        <label class="text-white small ms-2">
+          <i class="fas fa-clock"></i> 間隔
+        </label>
+        <input type="number" id="spawnInterval" class="form-control form-control-sm" 
+               style="width: 80px;" min="1000" max="8000" step="500" value="3500">
+        <span class="text-white small">ms</span>
+      </div>
+
+      <!-- MQTT 設定（可折疊） -->
+      <div class="mt-2">
+        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#mqttSettings">
+          <i class="fas fa-cog"></i> MQTT 設定
+        </button>
+        <div class="collapse mt-2" id="mqttSettings">
+          <div class="row g-2">
+            <div class="col-md-12">
+              <label class="form-label small">MQTT Broker URL</label>
+              <input type="text" id="mqttUrl" class="form-control form-control-sm" 
+                     value="ws://192.168.100.200:9001">
+              <small class="text-muted">訂閱主題: esp32/device-01/touch ~ esp32/device-09/touch</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // ========== 遊戲設定 ==========
+    const CONFIG = {
+      trackCount: 9,              // 9 個軌道（9 個玩家）
+      noteSpeedMin: 1.2,          // 最小下降速度 (px/frame) - 降低
+      noteSpeedMax: 2.5,          // 最大下降速度 (px/frame) - 降低
+      perfectWindow: 50,          // Perfect 判定範圍 (px)
+      goodWindow: 100,            // Good 判定範圍 (px)
+      noteHeight: 60,             // 音符高度
+      spawnInterval: 3500,        // 每個軌道音符生成間隔 (ms) - 增加間隔
+      hitZoneY: window.innerHeight - 160,  // 判定區 Y 座標
+      speedVariation: true        // 是否啟用速度變化
+    };
+
+    // ========== 音樂系統 ==========
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const musicState = {
+      playing: false,
+      bpm: 120,
+      volume: 0.7,
+      masterGain: null,
+      kickScheduler: null,
+      snareScheduler: null,
+      hihatScheduler: null,
+      bassScheduler: null
+    };
+
+    // 創建主音量控制
+    musicState.masterGain = audioContext.createGain();
+    musicState.masterGain.connect(audioContext.destination);
+    musicState.masterGain.gain.value = musicState.volume;
+
+    // 創建大鼓音效（Kick）
+    function playKick(time) {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.frequency.setValueAtTime(150, time);
+      osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+      
+      gain.gain.setValueAtTime(1, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+      
+      osc.connect(gain);
+      gain.connect(musicState.masterGain);
+      
+      osc.start(time);
+      osc.stop(time + 0.5);
+    }
+
+    // 創建小鼓音效（Snare）
+    function playSnare(time) {
+      const noise = audioContext.createBufferSource();
+      const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      
+      for (let i = 0; i < buffer.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      noise.buffer = buffer;
+      
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 1000;
+      
+      const gain = audioContext.createGain();
+      gain.gain.setValueAtTime(0.5, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(musicState.masterGain);
+      
+      noise.start(time);
+      noise.stop(time + 0.2);
+    }
+
+    // 創建Hi-Hat音效
+    function playHiHat(time) {
+      const noise = audioContext.createBufferSource();
+      const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.05, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      
+      for (let i = 0; i < buffer.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      noise.buffer = buffer;
+      
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 7000;
+      
+      const gain = audioContext.createGain();
+      gain.gain.setValueAtTime(0.3, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(musicState.masterGain);
+      
+      noise.start(time);
+      noise.stop(time + 0.05);
+    }
+
+    // 創建低音（Bass）
+    function playBass(time, note = 55) {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.type = 'sawtooth';
+      osc.frequency.value = note;
+      
+      gain.gain.setValueAtTime(0.3, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
+      
+      osc.connect(gain);
+      gain.connect(musicState.masterGain);
+      
+      osc.start(time);
+      osc.stop(time + 0.3);
+    }
+
+    // 節奏模式編排
+    function scheduleDrumPattern() {
+      if (!musicState.playing) return;
+      
+      const beatDuration = 60 / musicState.bpm;
+      const currentTime = audioContext.currentTime;
+      
+      // 4/4 拍節奏模式
+      // Beat 1, 3: Kick + Hi-Hat
+      playKick(currentTime);
+      playHiHat(currentTime);
+      playBass(currentTime, 55);
+      
+      // Beat 2, 4: Snare + Hi-Hat
+      setTimeout(() => {
+        if (musicState.playing) {
+          playSnare(audioContext.currentTime);
+          playHiHat(audioContext.currentTime);
+        }
+      }, beatDuration * 1000);
+      
+      // Off-beat Hi-Hats
+      setTimeout(() => {
+        if (musicState.playing) playHiHat(audioContext.currentTime);
+      }, beatDuration * 500);
+      
+      setTimeout(() => {
+        if (musicState.playing) playHiHat(audioContext.currentTime);
+      }, beatDuration * 1500);
+      
+      // Beat 3
+      setTimeout(() => {
+        if (musicState.playing) {
+          playKick(audioContext.currentTime);
+          playHiHat(audioContext.currentTime);
+          playBass(audioContext.currentTime, 65);
+        }
+      }, beatDuration * 2000);
+      
+      // Beat 4
+      setTimeout(() => {
+        if (musicState.playing) {
+          playSnare(audioContext.currentTime);
+          playHiHat(audioContext.currentTime);
+        }
+      }, beatDuration * 3000);
+      
+      // 繼續下一個循環
+      if (musicState.playing) {
+        setTimeout(() => scheduleDrumPattern(), beatDuration * 4000);
+      }
+    }
+
+    // 開始音樂
+    function startMusic() {
+      if (musicState.playing) return;
+      
+      // 恢復 AudioContext（需要用戶交互）
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      
+      musicState.playing = true;
+      scheduleDrumPattern();
+      
+      document.getElementById('musicStatus').textContent = '停止音樂';
+      document.getElementById('btnMusic').classList.remove('btn-info');
+      document.getElementById('btnMusic').classList.add('btn-secondary');
+      
+      console.log('🎵 背景音樂開始');
+    }
+
+    // 停止音樂
+    function stopMusic() {
+      musicState.playing = false;
+      
+      document.getElementById('musicStatus').textContent = '開啟音樂';
+      document.getElementById('btnMusic').classList.remove('btn-secondary');
+      document.getElementById('btnMusic').classList.add('btn-info');
+      
+      console.log('🔇 背景音樂停止');
+    }
+
+    // 切換音樂
+    function toggleMusic() {
+      if (musicState.playing) {
+        stopMusic();
+      } else {
+        startMusic();
+      }
+    }
+
+    // 更新音量
+    function updateVolume(value) {
+      musicState.volume = value / 100;
+      musicState.masterGain.gain.value = musicState.volume;
+      document.getElementById('volumeValue').textContent = value + '%';
+    }
+
+    // 更新 BPM
+    function updateBPM(value) {
+      musicState.bpm = parseInt(value);
+      console.log(`🎵 BPM 更新為: ${musicState.bpm}`);
+    }
+
+    // 播放擊中音效
+    function playHitSound(type) {
+      const time = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      if (type === 'perfect') {
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.4, time);
+      } else if (type === 'good') {
+        osc.frequency.value = 660;
+        gain.gain.setValueAtTime(0.3, time);
+      } else {
+        osc.frequency.value = 220;
+        gain.gain.setValueAtTime(0.2, time);
+      }
+      
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+      
+      osc.connect(gain);
+      gain.connect(musicState.masterGain);
+      
+      osc.start(time);
+      osc.stop(time + 0.1);
+    }
+
+    // ========== 遊戲狀態 ==========
+    const gameState = {
+      running: false,
+      score: 0,
+      combo: 0,
+      perfectCount: 0,
+      goodCount: 0,
+      missCount: 0,
+      notes: [],  // 不再使用，改為各軌道獨立
+      devices: new Map(),
+      mqttClient: null,
+      trackStats: Array(9).fill(null).map(() => ({
+        score: 0,
+        perfect: 0,
+        good: 0,
+        miss: 0,
+        total: 0,
+        combo: 0,  // 軌道獨立的 combo
+        notes: [],  // 每個軌道有自己的音符陣列
+        spawnTimer: null  // 每個軌道有自己的生成計時器
+      })),
+      lastTouchTime: new Map()
+    };
+
+    // ========== 初始化 ==========
+    function init() {
+      createTracks();
+      createDeviceIndicators();
+      setupEventListeners();
+      console.log('🎮 遊戲初始化完成');
+    }
+
+    // 創建 9 個軌道
+    function createTracks() {
+      const tracksContainer = document.getElementById('tracks');
+      tracksContainer.innerHTML = '';
+      
+      for (let i = 0; i < CONFIG.trackCount; i++) {
+        const track = document.createElement('div');
+        track.className = 'track';
+        track.dataset.trackIndex = i;
+        
+        // 創建軌道分數顯示
+        const trackScore = document.createElement('div');
+        trackScore.className = 'track-score';
+        trackScore.id = `track-score-${i}`;
+        trackScore.innerHTML = `
+          <span class="score-num">0</span>
+          <span class="accuracy">0%</span>
+        `;
+        track.appendChild(trackScore);
+        
+        // 創建判定區
+        const hitZone = document.createElement('div');
+        hitZone.className = 'hit-zone';
+        hitZone.textContent = i + 1;
+        track.appendChild(hitZone);
+        
+        tracksContainer.appendChild(track);
+      }
+    }
+
+    // 創建設備狀態指示器
+    function createDeviceIndicators() {
+      const container = document.getElementById('deviceStatus');
+      container.innerHTML = '';
+      
+      for (let i = 1; i <= CONFIG.trackCount; i++) {
+        const indicator = document.createElement('div');
+        indicator.className = 'device-indicator';
+        indicator.id = `device-${i}`;
+        indicator.textContent = i;
+        container.appendChild(indicator);
+      }
+    }
+
+    // ========== MQTT 連線 ==========
+    function connectMQTT() {
+      const url = document.getElementById('mqttUrl').value.trim();
+      
+      if (!url) {
+        alert('請輸入 MQTT URL');
+        return;
+      }
+
+      console.log(`連線到 ${url}...`);
+      gameState.mqttClient = mqtt.connect(url);
+
+      gameState.mqttClient.on('connect', () => {
+        console.log('✓ MQTT 連線成功');
+        
+        // 訂閱每個 ESP32 設備的獨立主題
+        for (let i = 1; i <= CONFIG.trackCount; i++) {
+          const deviceNum = String(i).padStart(2, '0');
+          const topic = `esp32/device-${deviceNum}/touch`;
+          
+          gameState.mqttClient.subscribe(topic, (err) => {
+            if (!err) {
+              console.log(`📡 已訂閱: ${topic}`);
+            }
+          });
+        }
+        
+        document.getElementById('btnStart').disabled = false;
+      });
+
+      gameState.mqttClient.on('message', (topic, payload) => {
+        try {
+          const data = JSON.parse(payload.toString());
+          handleTouchEvent(data, topic);
+        } catch (err) {
+          console.error('解析 MQTT 訊息錯誤:', err);
+        }
+      });
+
+      gameState.mqttClient.on('error', (err) => {
+        console.error('MQTT 錯誤:', err);
+      });
+    }
+
+    // 處理觸摸事件
+    function handleTouchEvent(data, topic) {
+      const { touch, device, timestamp } = data;
+      
+      // 從主題提取設備編號 (esp32/device-01/touch -> 01 -> 1)
+      const topicMatch = topic.match(/device-(\d+)/);
+      if (!topicMatch) {
+        console.warn('無法解析主題:', topic);
+        return;
+      }
+      
+      const deviceNumber = parseInt(topicMatch[1]);
+      const trackIndex = deviceNumber - 1;  // 設備 01 對應軌道 0
+      
+      if (trackIndex < 0 || trackIndex >= CONFIG.trackCount) return;
+      
+      // 更新設備狀態
+      updateDeviceStatus(deviceNumber, touch === 1);
+      
+      // 改成：只要觸發（touch = 1）就立即檢查打擊，不需要遊戲運行中
+      if (touch === 1) {
+        // 防抖處理：檢查距離上次觸發的時間間隔
+        const now = Date.now();
+        const lastTime = gameState.lastTouchTime.get(device) || 0;
+        const debounceTime = 150;  // 150ms 防抖時間
+        
+        if (now - lastTime < debounceTime) {
+          console.log(`⚠️ ${device} 觸發過快，忽略 (${now - lastTime}ms)`);
+          return;
+        }
+        
+        gameState.lastTouchTime.set(device, now);
+        console.log(`✋ 設備 ${deviceNumber} 觸發軌道 ${trackIndex + 1}`);
+        
+        // 如果遊戲正在運行，檢查擊中
+        if (gameState.running) {
+          checkHit(trackIndex);
+        } else {
+          // 遊戲未運行時，只顯示觸發效果
+          const track = document.querySelector(`.track[data-track-index="${trackIndex}"]`);
+          const hitZone = track?.querySelector('.hit-zone');
+          if (hitZone) {
+            flashHitZone(hitZone, 'active');
+            playHitSound('good');
+          }
+        }
+      }
+    }
+
+    // 更新設備狀態指示器
+    function updateDeviceStatus(deviceNumber, isActive) {
+      const indicator = document.getElementById(`device-${deviceNumber}`);
+      if (!indicator) return;
+      
+      indicator.classList.add('connected');
+      
+      if (isActive) {
+        indicator.classList.add('active');
+        setTimeout(() => {
+          indicator.classList.remove('active');
+        }, 300);
+      }
+    }
+
+    // ========== 遊戲邏輯 ==========
+    let gameLoop;
+
+    function startGame() {
+      gameState.running = true;
+      gameState.score = 0;
+      gameState.combo = 0;
+      gameState.perfectCount = 0;
+      gameState.goodCount = 0;
+      gameState.missCount = 0;
+      
+      updateUI();
+      
+      // 清除所有軌道的現有音符
+      document.querySelectorAll('.note').forEach(note => note.remove());
+      
+      // 為每個軌道啟動獨立的音符生成器
+      for (let i = 0; i < CONFIG.trackCount; i++) {
+        gameState.trackStats[i].notes = [];
+        startTrackNoteSpawner(i);
+      }
+      
+      // 開始遊戲循環
+      gameLoop = requestAnimationFrame(update);
+      
+      document.getElementById('btnStart').disabled = true;
+      document.getElementById('btnPause').disabled = false;
+      
+      console.log('🎮 遊戲開始！9 人比賽模式');
+    }
+
+    function pauseGame() {
+      gameState.running = false;
+      
+      // 停止所有軌道的生成器
+      for (let i = 0; i < CONFIG.trackCount; i++) {
+        if (gameState.trackStats[i].spawnTimer) {
+          clearInterval(gameState.trackStats[i].spawnTimer);
+          gameState.trackStats[i].spawnTimer = null;
+        }
+      }
+      
+      cancelAnimationFrame(gameLoop);
+      
+      document.getElementById('btnStart').disabled = false;
+      document.getElementById('btnPause').disabled = true;
+      
+      console.log('⏸️ 遊戲暫停');
+    }
+
+    function resetGame() {
+      pauseGame();
+      
+      // 清除所有音符
+      document.querySelectorAll('.note').forEach(note => note.remove());
+      
+      gameState.score = 0;
+      gameState.combo = 0;
+      gameState.perfectCount = 0;
+      gameState.goodCount = 0;
+      gameState.missCount = 0;
+      gameState.lastTouchTime.clear();
+      
+      // 重置所有軌道統計
+      for (let i = 0; i < CONFIG.trackCount; i++) {
+        gameState.trackStats[i] = {
+          score: 0,
+          perfect: 0,
+          good: 0,
+          miss: 0,
+          total: 0,
+          combo: 0,
+          notes: [],
+          spawnTimer: null
+        };
+        updateTrackScore(i);
+      }
+      
+      updateUI();
+      console.log('🔄 遊戲重置');
+    }
+
+    // 為單一軌道啟動音符生成器
+    function startTrackNoteSpawner(trackIndex) {
+      // 立即生成第一個音符
+      spawnNote(trackIndex);
+      
+      // 設定定時生成
+      gameState.trackStats[trackIndex].spawnTimer = setInterval(() => {
+        if (gameState.running) {
+          spawnNote(trackIndex);
+        }
+      }, CONFIG.spawnInterval);
+    }
+
+    // 在指定軌道生成音符
+    function spawnNote(trackIndex) {
+      const track = document.querySelector(`.track[data-track-index="${trackIndex}"]`);
+      if (!track) return;
+      
+      // 隨機生成速度（在最小和最大速度之間）
+      let noteSpeed;
+      if (CONFIG.speedVariation) {
+        noteSpeed = CONFIG.noteSpeedMin + Math.random() * (CONFIG.noteSpeedMax - CONFIG.noteSpeedMin);
+      } else {
+        noteSpeed = (CONFIG.noteSpeedMin + CONFIG.noteSpeedMax) / 2;  // 使用平均速度
+      }
+      
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.style.top = '-60px';
+      note.textContent = trackIndex + 1;
+      
+      // 根據速度調整音符顏色亮度（速度快的更亮）
+      const speedRatio = (noteSpeed - CONFIG.noteSpeedMin) / (CONFIG.noteSpeedMax - CONFIG.noteSpeedMin);
+      const brightness = 0.8 + speedRatio * 0.4;  // 0.8 到 1.2
+      note.style.filter = `brightness(${brightness})`;
+      
+      const noteData = {
+        element: note,
+        trackIndex: trackIndex,
+        y: -60,
+        speed: noteSpeed,  // 每個音符有自己的速度
+        hit: false
+      };
+      
+      gameState.trackStats[trackIndex].notes.push(noteData);
+      track.appendChild(note);
+    }
+
+    // 遊戲更新循環
+    function update() {
+      if (!gameState.running) return;
+      
+      // 更新所有軌道的音符
+      for (let trackIndex = 0; trackIndex < CONFIG.trackCount; trackIndex++) {
+        const trackNotes = gameState.trackStats[trackIndex].notes;
+        
+        for (let i = trackNotes.length - 1; i >= 0; i--) {
+          const noteData = trackNotes[i];
+          // 使用每個音符自己的速度
+          noteData.y += noteData.speed;
+          noteData.element.style.top = `${noteData.y}px`;
+          
+          // 檢查是否超出螢幕（MISS）
+          if (noteData.y > CONFIG.hitZoneY + 150 && !noteData.hit) {
+            noteData.hit = true;
+            handleMiss(noteData);
+            removeNote(trackIndex, i);
+          }
+        }
+      }
+      
+      gameLoop = requestAnimationFrame(update);
+    }
+
+    // 檢查擊中（針對特定軌道）
+    function checkHit(trackIndex) {
+      const track = document.querySelector(`.track[data-track-index="${trackIndex}"]`);
+      const hitZone = track.querySelector('.hit-zone');
+      
+      // 找到該軌道上最接近判定區的音符
+      const trackNotes = gameState.trackStats[trackIndex].notes;
+      let closestNote = null;
+      let closestDistance = Infinity;
+      let closestIndex = -1;
+      
+      // 尋找在判定範圍內且最接近判定區的音符
+      trackNotes.forEach((noteData, index) => {
+        if (!noteData.hit) {
+          const distance = Math.abs(noteData.y - CONFIG.hitZoneY);
+          
+          // 只考慮在合理範圍內的音符（Good 範圍的 1.5 倍）
+          if (distance < CONFIG.goodWindow * 1.5 && distance < closestDistance) {
+            closestDistance = distance;
+            closestNote = noteData;
+            closestIndex = index;
+          }
+        }
+      });
+      
+      if (!closestNote) {
+        console.log(`🔍 軌道 ${trackIndex + 1} 沒有可擊打的音符`);
+        // 顯示視覺回饋
+        flashHitZone(hitZone, 'active');
+        return;
+      }
+      
+      console.log(`🎯 軌道 ${trackIndex + 1} 觸發 - 音符位置: ${closestNote.y.toFixed(0)}px, 判定區: ${CONFIG.hitZoneY}px, 距離: ${closestDistance.toFixed(0)}px`);
+      
+      // 判定（完全獨立於其他軌道）
+      if (closestDistance < CONFIG.perfectWindow) {
+        console.log(`✨ 軌道 ${trackIndex + 1} - PERFECT!`);
+        handlePerfect(closestNote, hitZone);
+        removeNote(trackIndex, closestIndex);
+      } else if (closestDistance < CONFIG.goodWindow) {
+        console.log(`👍 軌道 ${trackIndex + 1} - GOOD!`);
+        handleGood(closestNote, hitZone);
+        removeNote(trackIndex, closestIndex);
+      } else {
+        console.log(`❌ 軌道 ${trackIndex + 1} - 距離太遠: ${closestDistance.toFixed(0)}px (需要 < ${CONFIG.goodWindow}px)`);
+        // 雖然有音符但距離太遠，顯示視覺回饋但不算 Miss
+        flashHitZone(hitZone, 'active');
+      }
+    }
+
+    // 移除音符（從特定軌道）
+    function removeNote(trackIndex, noteIndex) {
+      const trackNotes = gameState.trackStats[trackIndex].notes;
+      const noteData = trackNotes[noteIndex];
+      
+      if (noteData && noteData.element) {
+        noteData.element.remove();
+      }
+      
+      trackNotes.splice(noteIndex, 1);
+    }
+
+    // Perfect 判定（軌道獨立）
+    function handlePerfect(noteData, hitZone) {
+      noteData.hit = true;
+      const trackIndex = noteData.trackIndex;
+      
+      // 全局統計
+      gameState.score += 100;
+      gameState.perfectCount++;
+      
+      // 軌道獨立統計
+      gameState.trackStats[trackIndex].combo++;
+      gameState.trackStats[trackIndex].score += 100;
+      gameState.trackStats[trackIndex].perfect++;
+      gameState.trackStats[trackIndex].total++;
+      
+      showJudgment(`軌道 ${trackIndex + 1} PERFECT`, 'perfect');
+      flashHitZone(hitZone, 'perfect');
+      playHitSound('perfect');
+      updateUI();
+      updateTrackScore(trackIndex);
+      
+      console.log(`✨ 軌道 ${trackIndex + 1} - PERFECT! Combo: ${gameState.trackStats[trackIndex].combo}, 分數: +100`);
+    }
+
+    // Good 判定（軌道獨立）
+    function handleGood(noteData, hitZone) {
+      noteData.hit = true;
+      const trackIndex = noteData.trackIndex;
+      
+      // 全局統計
+      gameState.score += 50;
+      gameState.goodCount++;
+      
+      // 軌道獨立統計
+      gameState.trackStats[trackIndex].combo++;
+      gameState.trackStats[trackIndex].score += 50;
+      gameState.trackStats[trackIndex].good++;
+      gameState.trackStats[trackIndex].total++;
+      
+      showJudgment(`軌道 ${trackIndex + 1} GOOD`, 'good');
+      flashHitZone(hitZone, 'good');
+      playHitSound('good');
+      updateUI();
+      updateTrackScore(trackIndex);
+      
+      console.log(`👍 軌道 ${trackIndex + 1} - GOOD! Combo: ${gameState.trackStats[trackIndex].combo}, 分數: +50`);
+    }
+
+    // Miss 判定（軌道獨立）
+    function handleMiss(noteData) {
+      const trackIndex = noteData.trackIndex;
+      
+      // 只重置該軌道的 combo，不影響其他軌道
+      gameState.trackStats[trackIndex].combo = 0;
+      gameState.missCount++;
+      
+      // 更新軌道統計
+      gameState.trackStats[trackIndex].miss++;
+      gameState.trackStats[trackIndex].total++;
+      
+      showJudgment(`軌道 ${trackIndex + 1} MISS`, 'miss');
+      playHitSound('miss');
+      updateUI();
+      updateTrackScore(trackIndex);
+      
+      console.log(`❌ 軌道 ${trackIndex + 1} - MISS! 軌道 Combo 重置`);
+    }
+
+    // 顯示判定文字
+    function showJudgment(text, type) {
+      const existing = document.querySelector('.judgment');
+      if (existing) existing.remove();
+      
+      const judgment = document.createElement('div');
+      judgment.className = `judgment ${type}`;
+      judgment.textContent = text;
+      document.getElementById('gameArea').appendChild(judgment);
+      
+      setTimeout(() => judgment.remove(), 800);
+    }
+
+    // 判定區閃爍效果
+    function flashHitZone(hitZone, type) {
+      hitZone.classList.add(type);
+      setTimeout(() => {
+        hitZone.classList.remove(type);
+      }, 200);
+    }
+
+    // 更新 UI
+    function updateUI() {
+      document.getElementById('score').textContent = gameState.score;
+      document.getElementById('combo').textContent = gameState.combo;
+      
+      const total = gameState.perfectCount + gameState.goodCount + gameState.missCount;
+      const accuracy = total > 0 
+        ? Math.round(((gameState.perfectCount * 100 + gameState.goodCount * 50) / (total * 100)) * 100)
+        : 100;
+      document.getElementById('accuracy').textContent = accuracy + '%';
+    }
+
+    // 更新軌道分數顯示
+    function updateTrackScore(trackIndex) {
+      const stats = gameState.trackStats[trackIndex];
+      const scoreElement = document.getElementById(`track-score-${trackIndex}`);
+      
+      if (!scoreElement) return;
+      
+      const total = stats.total;
+      const accuracy = total > 0 
+        ? Math.round(((stats.perfect * 100 + stats.good * 50) / (total * 100)) * 100)
+        : 0;
+      
+      scoreElement.innerHTML = `
+        <span class="score-num">${stats.score}</span>
+        <span class="accuracy">${accuracy}%</span>
+      `;
+      
+      // 根據準確度改變顏色
+      const scoreNum = scoreElement.querySelector('.score-num');
+      if (accuracy >= 90) {
+        scoreNum.style.color = '#00ff00';
+      } else if (accuracy >= 70) {
+        scoreNum.style.color = '#ffd700';
+      } else if (accuracy >= 50) {
+        scoreNum.style.color = '#ff9900';
+      } else {
+        scoreNum.style.color = '#ff0000';
+      }
+    }
+
+    // ========== 事件監聽 ==========
+    function setupEventListeners() {
+      document.getElementById('btnConnect').addEventListener('click', connectMQTT);
+      document.getElementById('btnStart').addEventListener('click', startGame);
+      document.getElementById('btnPause').addEventListener('click', pauseGame);
+      document.getElementById('btnReset').addEventListener('click', resetGame);
+      document.getElementById('btnMusic').addEventListener('click', toggleMusic);
+      
+      // 音量控制
+      document.getElementById('volumeSlider').addEventListener('input', (e) => {
+        updateVolume(e.target.value);
+      });
+      
+      // BPM 控制
+      document.getElementById('bpmInput').addEventListener('change', (e) => {
+        updateBPM(e.target.value);
+      });
+      
+      // 速度變化開關
+      document.getElementById('speedVariation').addEventListener('change', (e) => {
+        CONFIG.speedVariation = e.target.checked;
+        console.log(`速度變化: ${CONFIG.speedVariation ? '開啟' : '關閉'}`);
+      });
+      
+      // 最小速度控制
+      document.getElementById('minSpeed').addEventListener('change', (e) => {
+        const value = parseFloat(e.target.value);
+        if (value < CONFIG.noteSpeedMax) {
+          CONFIG.noteSpeedMin = value;
+          console.log(`最小速度設定為: ${value}`);
+        } else {
+          alert('最小速度不能大於或等於最大速度！');
+          e.target.value = CONFIG.noteSpeedMin;
+        }
+      });
+      
+      // 最大速度控制
+      document.getElementById('maxSpeed').addEventListener('change', (e) => {
+        const value = parseFloat(e.target.value);
+        if (value > CONFIG.noteSpeedMin) {
+          CONFIG.noteSpeedMax = value;
+          console.log(`最大速度設定為: ${value}`);
+        } else {
+          alert('最大速度不能小於或等於最小速度！');
+          e.target.value = CONFIG.noteSpeedMax;
+        }
+      });
+      
+      // 音符生成間隔控制
+      document.getElementById('spawnInterval').addEventListener('change', (e) => {
+        const value = parseInt(e.target.value);
+        if (value >= 1000 && value <= 8000) {
+          CONFIG.spawnInterval = value;
+          console.log(`音符生成間隔設定為: ${value}ms`);
+          
+          // 如果遊戲正在運行，重新啟動生成器
+          if (gameState.running) {
+            console.log('⚠️ 請重新開始遊戲以套用新的間隔設定');
+          }
+        } else {
+          alert('間隔必須在 1000-8000ms 之間！');
+          e.target.value = CONFIG.spawnInterval;
+        }
+      });
+      
+      // 鍵盤測試（1-9 鍵）
+      document.addEventListener('keydown', (e) => {
+        if (!gameState.running) return;
+        const key = parseInt(e.key);
+        if (key >= 1 && key <= 9) {
+          checkHit(key - 1);
+        }
+      });
+    }
+
+    // ========== 啟動 ==========
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
