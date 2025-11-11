@@ -1,0 +1,1043 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐟 撈魚遊戲 - 魚池畫面</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(to bottom, #1e3a5f 0%, #2a5f7f 50%, #1a4d6d 100%);
+    }
+
+    #info-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 20px;
+      border-radius: 15px;
+      font-size: 16px;
+      line-height: 1.8;
+      z-index: 1000;
+      max-width: 350px;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #info-panel h2 {
+      margin-bottom: 15px;
+      color: #4fc3f7;
+      font-size: 24px;
+      text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .status-icon {
+      font-size: 20px;
+      margin-right: 10px;
+      min-width: 25px;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .status-connected {
+      background: #4caf50;
+      box-shadow: 0 0 10px #4caf50;
+    }
+
+    .status-disconnected {
+      background: #f44336;
+    }
+
+    .status-active {
+      background: #ffc107;
+      box-shadow: 0 0 10px #ffc107;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    #player-list {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .player-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 5px 0;
+      padding: 10px;
+      background: rgba(79, 195, 247, 0.1);
+      border-radius: 8px;
+      border-left: 3px solid #4fc3f7;
+    }
+
+    .player-score {
+      font-weight: bold;
+      color: #ffc107;
+      font-size: 18px;
+    }
+
+    #game-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(76, 175, 80, 0.95);
+      color: white;
+      padding: 30px 50px;
+      border-radius: 20px;
+      font-size: 36px;
+      font-weight: bold;
+      z-index: 2000;
+      display: none;
+      text-align: center;
+      animation: messagePopup 0.3s ease-out;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    @keyframes messagePopup {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .qr-code {
+      margin-top: 15px;
+      text-align: center;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+    }
+
+    .qr-code img {
+      width: 150px;
+      height: 150px;
+    }
+
+    .qr-text {
+      margin-top: 10px;
+      color: #333;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="info-panel">
+    <h2>🐟 撈魚遊戲</h2>
+    
+    <div class="status-item">
+      <span class="status-icon">🌐</span>
+      <div>
+        <div>WebSocket: <span class="status-indicator" id="ws-status"></span><span id="ws-text">連接中...</span></div>
+      </div>
+    </div>
+
+    <div class="status-item">
+      <span class="status-icon">📏</span>
+      <div id="distance-status">距離: -- cm</div>
+    </div>
+
+    <div class="status-item">
+      <span class="status-icon">🎯</span>
+      <div id="trigger-status">準備撈魚: <span style="color: #f44336;">距離太遠</span></div>
+    </div>
+
+    <div id="player-list">
+      <div style="font-size: 14px; color: #4fc3f7; margin-bottom: 10px;">📱 連接的玩家:</div>
+      <div id="players-container">
+        <div style="color: #999; font-style: italic;">等待玩家連接...</div>
+      </div>
+    </div>
+
+    <div class="qr-code">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://192.168.100.200:8081/mobile-fish-simple.html" alt="手機控制器 QR Code">
+      <div class="qr-text">掃描加入遊戲<br>手機控制器</div>
+    </div>
+  </div>
+
+  <div id="game-message"></div>
+
+  <script>
+    // ==================== WebSocket 連接 ====================
+    const WS_URL = 'ws://192.168.100.200:8080';
+    let ws;
+    let wsConnected = false;
+
+    // ==================== 遊戲狀態 ====================
+    let currentDistance = 999;  // 目前距離
+    let distanceNear = false;   // 是否在 10cm 內
+    const TRIGGER_DISTANCE = 10; // 觸發距離 (cm)
+
+    // 玩家系統
+    let players = new Map();    // 儲存所有連接的玩家 {playerId: {name, score, color}}
+    let playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+    let nextColorIndex = 0;
+
+    // 魚的陣列
+    let fishes = [];
+    const FISH_COUNT = 20; // 增加魚的數量
+
+    // 魚類型定義（10種不同的魚）
+    const FISH_TYPES = [
+      // 0: 普通藍魚 🐟
+      { name: '藍魚', color: [64, 164, 223], points: 1, size: 1.0, speed: 1.0, rarity: 40, emoji: '🐟' },
+      // 1: 橘色小丑魚 🐠
+      { name: '小丑魚', color: [255, 140, 50], points: 2, size: 0.9, speed: 1.3, rarity: 30, emoji: '🐠' },
+      // 2: 綠色熱帶魚 🐡
+      { name: '熱帶魚', color: [50, 205, 150], points: 2, size: 0.85, speed: 1.4, rarity: 25, emoji: '🐡' },
+      // 3: 金魚 ⭐
+      { name: '金魚', color: [255, 215, 0], points: 5, size: 1.3, speed: 0.8, rarity: 15, emoji: '⭐' },
+      // 4: 紫色魔法魚 🔮
+      { name: '魔法魚', color: [147, 112, 219], points: 8, size: 1.1, speed: 1.6, rarity: 10, emoji: '🔮' },
+      // 5: 粉紅愛心魚 💕
+      { name: '愛心魚', color: [255, 105, 180], points: 10, size: 0.9, speed: 1.8, rarity: 8, emoji: '💕' },
+      // 6: 彩虹魚 🌈
+      { name: '彩虹魚', color: [255, 100, 255], points: 15, size: 1.4, speed: 1.2, rarity: 5, emoji: '🌈' },
+      // 7: 鑽石魚 💎
+      { name: '鑽石魚', color: [173, 216, 230], points: 20, size: 1.0, speed: 2.0, rarity: 3, emoji: '💎' },
+      // 8: 幸運魚 🍀
+      { name: '幸運魚', color: [50, 205, 50], points: 30, size: 1.2, speed: 1.5, rarity: 2, emoji: '🍀' },
+      // 9: 傳說龍魚 🐉
+      { name: '龍魚', color: [255, 69, 0], points: 50, size: 1.6, speed: 1.0, rarity: 1, emoji: '🐉' }
+    ];
+
+    // ==================== 魚類 ====================
+    class Fish {
+      constructor() {
+        this.reset();
+        this.y = random(100, height - 100);
+        this.tailOffset = random(TWO_PI);
+        this.swimOffset = random(TWO_PI);
+        this.bobOffset = random(TWO_PI);
+        
+        // 根據稀有度隨機選擇魚類型
+        this.type = this.selectFishType();
+        const fishData = FISH_TYPES[this.type];
+        
+        // 設定屬性
+        this.name = fishData.name;
+        this.baseColor = color(fishData.color[0], fishData.color[1], fishData.color[2], 220);
+        this.points = fishData.points;
+        this.baseSize = random(35, 55) * fishData.size;
+        this.size = this.baseSize;
+        this.baseSpeed = random(1.2, 2.5) * fishData.speed;
+        this.speed = this.baseSpeed;
+        this.emoji = fishData.emoji;
+        
+        // 特殊效果
+        this.glowIntensity = 0;
+        this.sparkles = [];
+        if (this.points >= 15) {
+          // 稀有魚有閃爍效果
+          this.hasGlow = true;
+        }
+      }
+      
+      selectFishType() {
+        // 使用稀有度權重隨機選擇魚類型
+        const totalWeight = FISH_TYPES.reduce((sum, fish) => sum + fish.rarity, 0);
+        let rand = random(totalWeight);
+        let cumulative = 0;
+        
+        for (let i = 0; i < FISH_TYPES.length; i++) {
+          cumulative += FISH_TYPES[i].rarity;
+          if (rand <= cumulative) {
+            return i;
+          }
+        }
+        return 0; // 預設返回普通魚
+      }
+
+      reset() {
+        this.x = -50;
+        this.direction = 1;
+        if (random(1) > 0.5) {
+          this.x = width + 50;
+          this.direction = -1;
+        }
+      }
+
+      update() {
+        this.x += this.speed * this.direction;
+        
+        // 上下浮動效果
+        let bobAmount = sin(frameCount * 0.02 + this.bobOffset) * 3;
+        this.y += bobAmount * 0.1;
+        
+        // 限制在畫面內
+        this.y = constrain(this.y, 80, height - 80);
+        
+        // 閃爍效果（稀有魚）
+        if (this.hasGlow) {
+          this.glowIntensity = (sin(frameCount * 0.05) + 1) * 0.5;
+        }
+        
+        // 產生閃光粒子（傳說魚）
+        if (this.points >= 30 && frameCount % 5 === 0) {
+          this.sparkles.push({
+            x: random(-10, 10),
+            y: random(-10, 10),
+            life: 1.0
+          });
+        }
+        
+        // 更新閃光粒子
+        for (let i = this.sparkles.length - 1; i >= 0; i--) {
+          this.sparkles[i].life -= 0.05;
+          if (this.sparkles[i].life <= 0) {
+            this.sparkles.splice(i, 1);
+          }
+        }
+        
+        // 如果魚游出畫面，重新生成
+        if ((this.direction === 1 && this.x > width + 50) || 
+            (this.direction === -1 && this.x < -50)) {
+          this.reset();
+          this.y = random(100, height - 100);
+          // 重新選擇魚類型
+          this.type = this.selectFishType();
+          const fishData = FISH_TYPES[this.type];
+          this.name = fishData.name;
+          this.baseColor = color(fishData.color[0], fishData.color[1], fishData.color[2], 220);
+          this.points = fishData.points;
+          this.baseSize = random(35, 55) * fishData.size;
+          this.size = this.baseSize;
+          this.baseSpeed = random(1.2, 2.5) * fishData.speed;
+          this.speed = this.baseSpeed;
+          this.emoji = fishData.emoji;
+          this.hasGlow = this.points >= 15;
+          this.sparkles = [];
+        }
+      }
+
+      display() {
+        push();
+        translate(this.x, this.y);
+        
+        // 游動效果
+        let swimWave = sin(frameCount * 0.1 + this.swimOffset) * 5;
+        translate(0, swimWave);
+        
+        // 根據方向翻轉
+        if (this.direction === -1) {
+          scale(-1, 1);
+        }
+
+        // 發光效果（稀有魚）
+        if (this.hasGlow) {
+          noStroke();
+          let glowColor = color(red(this.baseColor), green(this.baseColor), blue(this.baseColor), this.glowIntensity * 100);
+          fill(glowColor);
+          ellipse(0, 0, this.size * 1.5, this.size * 0.9);
+        }
+
+        // 魚身
+        fill(this.baseColor);
+        stroke(0, 50);
+        strokeWeight(2);
+        ellipse(0, 0, this.size, this.size * 0.6);
+
+        // 魚鰭
+        noStroke();
+        fill(red(this.baseColor) * 0.8, green(this.baseColor) * 0.8, blue(this.baseColor) * 0.8, 200);
+        // 上鰭
+        triangle(0, -this.size * 0.3, 
+                 -this.size * 0.2, -this.size * 0.5,
+                 this.size * 0.1, -this.size * 0.3);
+        // 下鰭
+        triangle(-this.size * 0.1, this.size * 0.3, 
+                 -this.size * 0.2, this.size * 0.5,
+                 this.size * 0.1, this.size * 0.3);
+
+        // 魚尾
+        stroke(0, 50);
+        strokeWeight(1);
+        fill(this.baseColor);
+        let tailWave = sin(frameCount * 0.2 + this.tailOffset) * 10;
+        beginShape();
+        vertex(-this.size/2, 0);
+        vertex(-this.size/2 - 15, -12 + tailWave);
+        vertex(-this.size/2 - 10, 0);
+        vertex(-this.size/2 - 15, 12 + tailWave);
+        endShape(CLOSE);
+
+        // 魚眼
+        fill(255);
+        noStroke();
+        ellipse(this.size/4, -this.size/6, 8, 8);
+        fill(0);
+        ellipse(this.size/4 + 2, -this.size/6, 4, 4);
+
+        // 鱗片紋理
+        noFill();
+        stroke(255, 255, 255, 50);
+        strokeWeight(1);
+        for (let i = -1; i < 2; i++) {
+          arc(this.size/6, i * 10, 8, 8, PI, 0);
+        }
+
+        // 特殊標記和分數顯示
+        textAlign(CENTER, CENTER);
+        textSize(14);
+        noStroke();
+        
+        if (this.type === 0) {
+          // 普通藍魚 - 簡單圖案
+          fill(255, 255, 255, 100);
+          ellipse(0, this.size/4, 4, 4);
+        } else if (this.type === 1) {
+          // 小丑魚 - 條紋
+          stroke(255, 255, 255, 150);
+          strokeWeight(3);
+          line(-this.size/3, -this.size/3, -this.size/3, this.size/3);
+          line(0, -this.size/3, 0, this.size/3);
+        } else if (this.type === 2) {
+          // 熱帶魚 - 斑點
+          fill(255, 255, 100, 180);
+          noStroke();
+          ellipse(-this.size/4, 0, 5, 5);
+          ellipse(this.size/6, this.size/5, 4, 4);
+        } else if (this.type === 3) {
+          // 金魚 - 星星 ⭐
+          fill(255, 255, 0);
+          noStroke();
+          for (let i = 0; i < 5; i++) {
+            let angle = TWO_PI / 5 * i - PI / 2;
+            let x = cos(angle) * 6;
+            let y = sin(angle) * 6 + this.size/4;
+            ellipse(x, y, 3, 3);
+          }
+          // 分數
+          fill(255, 215, 0);
+          text('+5', 0, -this.size * 0.6);
+        } else if (this.type === 4) {
+          // 魔法魚 - 魔法符號 🔮
+          fill(200, 150, 255);
+          noStroke();
+          ellipse(0, this.size/4, 8, 8);
+          fill(255, 255, 255, 200);
+          ellipse(0, this.size/4, 4, 4);
+          fill(147, 112, 219);
+          text('+8', 0, -this.size * 0.6);
+        } else if (this.type === 5) {
+          // 愛心魚 - 愛心 💕
+          fill(255, 0, 150);
+          noStroke();
+          ellipse(-3, this.size/4, 6, 6);
+          ellipse(3, this.size/4, 6, 6);
+          triangle(-5, this.size/4, 5, this.size/4, 0, this.size/4 + 8);
+          fill(255, 105, 180);
+          text('+10', 0, -this.size * 0.6);
+        } else if (this.type === 6) {
+          // 彩虹魚 - 多彩光環 🌈
+          noFill();
+          strokeWeight(2);
+          stroke(255, 0, 0, 150);
+          ellipse(0, 0, this.size * 0.4, this.size * 0.4);
+          stroke(255, 255, 0, 150);
+          ellipse(0, 0, this.size * 0.5, this.size * 0.5);
+          stroke(0, 255, 0, 150);
+          ellipse(0, 0, this.size * 0.6, this.size * 0.6);
+          fill(255, 100, 255);
+          noStroke();
+          text('+15', 0, -this.size * 0.7);
+        } else if (this.type === 7) {
+          // 鑽石魚 - 鑽石形狀 💎
+          fill(200, 230, 255, 200);
+          noStroke();
+          quad(0, -5 + this.size/4, 5, this.size/4, 0, 5 + this.size/4, -5, this.size/4);
+          fill(255, 255, 255, 250);
+          triangle(0, -3 + this.size/4, 3, this.size/4, 0, this.size/4);
+          fill(173, 216, 230);
+          text('+20', 0, -this.size * 0.7);
+        } else if (this.type === 8) {
+          // 幸運魚 - 四葉草 🍀
+          fill(50, 255, 50);
+          noStroke();
+          for (let i = 0; i < 4; i++) {
+            push();
+            translate(0, this.size/4);
+            rotate(PI / 2 * i);
+            ellipse(0, -4, 6, 8);
+            pop();
+          }
+          fill(255, 215, 0);
+          text('+30', 0, -this.size * 0.7);
+        } else if (this.type === 9) {
+          // 龍魚 - 龍鱗和火焰 🐉
+          // 龍鱗
+          noFill();
+          stroke(255, 100, 0, 150);
+          strokeWeight(2);
+          for (let i = -2; i < 3; i++) {
+            arc(0, i * 8, 12, 12, 0, PI);
+          }
+          // 火焰
+          noStroke();
+          fill(255, 69, 0, 200);
+          triangle(-this.size/2, 0, -this.size/2 - 10, -8, -this.size/2 - 8, 0);
+          fill(255, 140, 0, 200);
+          triangle(-this.size/2, 0, -this.size/2 - 8, 0, -this.size/2 - 10, 8);
+          fill(255, 215, 0);
+          textSize(16);
+          text('+50', 0, -this.size * 0.8);
+        }
+
+        // 繪製閃光粒子（傳說魚專屬）
+        for (let sparkle of this.sparkles) {
+          fill(255, 255, 0, sparkle.life * 255);
+          noStroke();
+          ellipse(sparkle.x, sparkle.y, 3 * sparkle.life, 3 * sparkle.life);
+        }
+
+        pop();
+        
+        // 在魚的上方顯示名稱（滑鼠靠近時）
+        if (dist(mouseX, mouseY, this.x, this.y) < this.size) {
+          push();
+          translate(this.x, this.y - this.size * 0.8);
+          fill(0, 0, 0, 150);
+          noStroke();
+          rectMode(CENTER);
+          rect(0, 0, textWidth(this.name + ' ' + this.emoji) + 10, 20, 5);
+          fill(255);
+          textAlign(CENTER, CENTER);
+          textSize(12);
+          text(this.emoji + ' ' + this.name, 0, 0);
+          pop();
+        }
+      }
+
+      isNear(x, y, radius) {
+        return dist(this.x, this.y, x, y) < radius + this.size/2;
+      }
+    }
+
+    // ==================== p5.js 設定 ====================
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      
+      // 初始化魚群
+      for (let i = 0; i < FISH_COUNT; i++) {
+        fishes.push(new Fish());
+      }
+
+      // 連接 WebSocket
+      connectWebSocket();
+    }
+
+    function draw() {
+      // 繪製水底背景
+      drawWaterBackground();
+      
+      // 繪製氣泡
+      drawBubbles();
+      
+      // 更新並繪製魚
+      for (let fish of fishes) {
+        fish.update();
+        fish.display();
+      }
+
+      // 繪製距離感測器視覺化
+      drawDistanceSensor();
+      
+      // 更新特效
+      updateScorePopups();
+      updateFireworks();
+      updateStars();
+    }
+
+    function drawWaterBackground() {
+      // 深藍色漸層水底
+      for (let i = 0; i < height; i++) {
+        let inter = map(i, 0, height, 0, 1);
+        let c = lerpColor(color(30, 58, 95), color(26, 77, 109), inter);
+        stroke(c);
+        line(0, i, width, i);
+      }
+
+      // 水波紋效果
+      noFill();
+      stroke(255, 255, 255, 30);
+      strokeWeight(2);
+      for (let i = 0; i < 5; i++) {
+        let y = (frameCount * 0.5 + i * 100) % height;
+        let waveHeight = sin(frameCount * 0.02 + i) * 20;
+        beginShape();
+        for (let x = 0; x <= width; x += 50) {
+          let offset = sin(x * 0.02 + frameCount * 0.05) * waveHeight;
+          vertex(x, y + offset);
+        }
+        endShape();
+      }
+    }
+
+    function drawBubbles() {
+      // 隨機氣泡
+      if (frameCount % 30 === 0) {
+        for (let i = 0; i < 3; i++) {
+          let x = random(width);
+          let y = height + 20;
+          drawBubble(x, y, random(5, 15));
+        }
+      }
+
+      noStroke();
+      fill(255, 255, 255, 100);
+      for (let i = 0; i < 10; i++) {
+        let x = (frameCount * 0.5 + i * 80) % width;
+        let y = height - (frameCount * 2 + i * 100) % height;
+        let size = 5 + (i % 3) * 5;
+        ellipse(x, y, size, size);
+      }
+    }
+
+    function drawBubble(x, y, size) {
+      noStroke();
+      fill(255, 255, 255, 100);
+      ellipse(x, y, size, size);
+      fill(255, 255, 255, 200);
+      ellipse(x - size/4, y - size/4, size/3, size/3);
+    }
+
+    function drawDistanceSensor() {
+      // 繪製距離感測器區域（在畫面中心）
+      push();
+      translate(width / 2, height - 150);
+      
+      // 距離指示器
+      if (distanceNear) {
+        fill(76, 175, 80, 100);
+        stroke(76, 175, 80, 200);
+      } else {
+        fill(255, 152, 0, 50);
+        stroke(255, 152, 0, 150);
+      }
+      strokeWeight(3);
+      
+      // 繪製感測區域
+      let sensorRadius = map(currentDistance, 0, 50, 200, 50);
+      sensorRadius = constrain(sensorRadius, 50, 200);
+      ellipse(0, 0, sensorRadius * 2, sensorRadius * 2);
+      
+      // 距離文字
+      fill(255);
+      noStroke();
+      textAlign(CENTER, CENTER);
+      textSize(24);
+      text(`${currentDistance} cm`, 0, 0);
+      
+      // 狀態文字
+      textSize(16);
+      if (distanceNear) {
+        fill(76, 175, 80);
+        text('✓ 準備撈魚', 0, 30);
+      } else {
+        fill(255, 152, 0);
+        text('⚠ 靠近畫面', 0, 30);
+      }
+      
+      pop();
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+
+    // ==================== WebSocket 處理 ====================
+    function connectWebSocket() {
+      console.log('正在連接 WebSocket...');
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket 已連接');
+        wsConnected = true;
+        updateWSStatus(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (err) {
+          console.error('解析訊息錯誤:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        updateWSStatus(false);
+      };
+
+      ws.onclose = () => {
+        console.log('⚠️ WebSocket 已斷線，5秒後重連...');
+        wsConnected = false;
+        updateWSStatus(false);
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    function handleWebSocketMessage(data) {
+      // 處理 MQTT 訊息
+      if (data.type === 'mqtt_message') {
+        const topic = data.topic;
+        const payload = data.payload;
+
+        // 距離感測器數據
+        if (topic.includes('/distance')) {
+          try {
+            const distanceData = JSON.parse(payload);
+            updateDistance(distanceData.distance, distanceData.valid);
+          } catch (err) {
+            console.error('解析距離數據錯誤:', err);
+          }
+        }
+
+        // 手機撈魚動作
+        if (topic.includes('/fish/scoop')) {
+          try {
+            const scoopData = JSON.parse(payload);
+            handleScoopAction(scoopData);
+          } catch (err) {
+            console.error('解析撈魚數據錯誤:', err);
+          }
+        }
+
+        // 玩家連接
+        if (topic.includes('/fish/join')) {
+          try {
+            const playerData = JSON.parse(payload);
+            addPlayer(playerData);
+          } catch (err) {
+            console.error('解析玩家數據錯誤:', err);
+          }
+        }
+      }
+    }
+
+    function updateDistance(distance, valid) {
+      if (valid && distance >= 0) {
+        currentDistance = Math.round(distance);
+        distanceNear = (distance < TRIGGER_DISTANCE);
+        
+        // 更新 UI
+        document.getElementById('distance-status').textContent = `距離: ${currentDistance} cm`;
+        
+        const triggerStatus = document.getElementById('trigger-status');
+        if (distanceNear) {
+          triggerStatus.innerHTML = '準備撈魚: <span style="color: #4caf50;">✓ 可以撈魚！</span>';
+        } else {
+          triggerStatus.innerHTML = '準備撈魚: <span style="color: #f44336;">距離太遠</span>';
+        }
+      }
+    }
+
+    function addPlayer(playerData) {
+      const playerId = playerData.playerId || playerData.device;
+      
+      if (!players.has(playerId)) {
+        const playerColor = playerColors[nextColorIndex % playerColors.length];
+        nextColorIndex++;
+        
+        players.set(playerId, {
+          name: playerData.name || `玩家 ${players.size + 1}`,
+          score: 0,
+          color: playerColor,
+          lastSeen: Date.now()
+        });
+
+        console.log(`🎮 玩家加入: ${playerId}`);
+        updatePlayerList();
+      }
+    }
+
+    function handleScoopAction(scoopData) {
+      const playerId = scoopData.playerId || scoopData.device;
+      
+      console.log(`🎣 ${playerId} 執行撈魚動作！距離: ${currentDistance}cm`);
+
+      // 檢查是否滿足條件：距離 < 10cm
+      if (distanceNear) {
+        // 尋找最近的魚
+        let nearestFish = null;
+        let minDistance = 999999;
+        
+        for (let fish of fishes) {
+          let d = dist(width/2, height - 150, fish.x, fish.y);
+          if (d < minDistance && d < 150) {
+            minDistance = d;
+            nearestFish = fish;
+          }
+        }
+
+        if (nearestFish) {
+          // 成功撈到魚！
+          const points = nearestFish.points;
+          const fishName = nearestFish.name;
+          const fishEmoji = nearestFish.emoji;
+          
+          if (players.has(playerId)) {
+            players.get(playerId).score += points;
+            updatePlayerList();
+          }
+
+          // 根據魚的稀有度顯示不同的訊息和顏色
+          let message = '';
+          let bgColor = '';
+          
+          if (points >= 50) {
+            message = `🐉 傳說！${fishEmoji} ${fishName}！+${points} 分`;
+            bgColor = '#ff4500';
+            createFireworks(width/2, height - 150);
+          } else if (points >= 30) {
+            message = `🍀 超級幸運！${fishEmoji} ${fishName}！+${points} 分`;
+            bgColor = '#32cd32';
+            createStars(width/2, height - 150);
+          } else if (points >= 15) {
+            message = `✨ 稀有！${fishEmoji} ${fishName}！+${points} 分`;
+            bgColor = '#9370db';
+          } else if (points >= 10) {
+            message = `💕 太棒了！${fishEmoji} ${fishName}！+${points} 分`;
+            bgColor = '#ff69b4';
+          } else if (points >= 5) {
+            message = `⭐ 很好！${fishEmoji} ${fishName}！+${points} 分`;
+            bgColor = '#ffd700';
+          } else {
+            message = `🎉 撈到 ${fishEmoji} ${fishName}！+${points} 分`;
+            bgColor = '#4caf50';
+          }
+          
+          showGameMessage(message, bgColor);
+          
+          // 創建分數飛出特效
+          createScorePopup(width/2, height - 150, points, fishEmoji);
+          
+          // 魚消失並重新生成
+          nearestFish.reset();
+          nearestFish.y = random(100, height - 100);
+          
+          console.log(`✅ ${playerId} 成功撈到 ${fishName}！獲得 ${points} 分`);
+        } else {
+          showGameMessage('🎯 沒撈到魚...', '#ff9800');
+          console.log(`❌ ${playerId} 沒撈到魚`);
+        }
+      } else {
+        showGameMessage('⚠️ 距離太遠了！', '#f44336');
+        console.log(`❌ ${playerId} 距離太遠 (${currentDistance}cm)`);
+      }
+    }
+    
+    // 分數飛出特效
+    let scorePopups = [];
+    
+    function createScorePopup(x, y, points, emoji) {
+      scorePopups.push({
+        x: x,
+        y: y,
+        points: points,
+        emoji: emoji,
+        life: 1.0,
+        vy: -3
+      });
+    }
+    
+    function updateScorePopups() {
+      for (let i = scorePopups.length - 1; i >= 0; i--) {
+        let popup = scorePopups[i];
+        popup.y += popup.vy;
+        popup.vy += 0.1; // 重力
+        popup.life -= 0.02;
+        
+        // 繪製
+        push();
+        textAlign(CENTER, CENTER);
+        textSize(24 + popup.life * 12);
+        fill(255, 215, 0, popup.life * 255);
+        stroke(0, 0, 0, popup.life * 200);
+        strokeWeight(3);
+        text(popup.emoji + ' +' + popup.points, popup.x, popup.y);
+        pop();
+        
+        if (popup.life <= 0) {
+          scorePopups.splice(i, 1);
+        }
+      }
+    }
+    
+    // 煙火特效（傳說魚專屬）
+    let fireworks = [];
+    
+    function createFireworks(x, y) {
+      for (let i = 0; i < 30; i++) {
+        let angle = random(TWO_PI);
+        let speed = random(2, 8);
+        fireworks.push({
+          x: x,
+          y: y,
+          vx: cos(angle) * speed,
+          vy: sin(angle) * speed,
+          color: color(random(255), random(255), random(255)),
+          life: 1.0
+        });
+      }
+    }
+    
+    function updateFireworks() {
+      for (let i = fireworks.length - 1; i >= 0; i--) {
+        let fw = fireworks[i];
+        fw.x += fw.vx;
+        fw.y += fw.vy;
+        fw.vy += 0.2; // 重力
+        fw.life -= 0.02;
+        
+        // 繪製
+        push();
+        noStroke();
+        fill(red(fw.color), green(fw.color), blue(fw.color), fw.life * 255);
+        ellipse(fw.x, fw.y, 8 * fw.life, 8 * fw.life);
+        pop();
+        
+        if (fw.life <= 0) {
+          fireworks.splice(i, 1);
+        }
+      }
+    }
+    
+    // 星星特效（幸運魚專屬）
+    let stars = [];
+    
+    function createStars(x, y) {
+      for (let i = 0; i < 15; i++) {
+        let angle = random(TWO_PI);
+        let speed = random(1, 4);
+        stars.push({
+          x: x,
+          y: y,
+          vx: cos(angle) * speed,
+          vy: sin(angle) * speed - 2,
+          life: 1.0,
+          rotation: 0
+        });
+      }
+    }
+    
+    function updateStars() {
+      for (let i = stars.length - 1; i >= 0; i--) {
+        let star = stars[i];
+        star.x += star.vx;
+        star.y += star.vy;
+        star.vy += 0.1;
+        star.rotation += 0.1;
+        star.life -= 0.015;
+        
+        // 繪製星星
+        push();
+        translate(star.x, star.y);
+        rotate(star.rotation);
+        fill(255, 215, 0, star.life * 255);
+        noStroke();
+        
+        // 五角星
+        beginShape();
+        for (let j = 0; j < 5; j++) {
+          let angle = TWO_PI / 5 * j - PI / 2;
+          let x = cos(angle) * 10 * star.life;
+          let y = sin(angle) * 10 * star.life;
+          vertex(x, y);
+          
+          angle = TWO_PI / 5 * (j + 0.5) - PI / 2;
+          x = cos(angle) * 5 * star.life;
+          y = sin(angle) * 5 * star.life;
+          vertex(x, y);
+        }
+        endShape(CLOSE);
+        
+        pop();
+        
+        if (star.life <= 0) {
+          stars.splice(i, 1);
+        }
+      }
+    }
+
+    function updatePlayerList() {
+      const container = document.getElementById('players-container');
+      
+      if (players.size === 0) {
+        container.innerHTML = '<div style="color: #999; font-style: italic;">等待玩家連接...</div>';
+        return;
+      }
+
+      let html = '';
+      for (let [playerId, player] of players) {
+        html += `
+          <div class="player-item" style="border-left-color: ${player.color}">
+            <div>
+              <span style="color: ${player.color}">●</span>
+              ${player.name}
+            </div>
+            <div class="player-score">🐟 ${player.score}</div>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function showGameMessage(message, bgColor) {
+      const messageEl = document.getElementById('game-message');
+      messageEl.textContent = message;
+      messageEl.style.background = bgColor;
+      messageEl.style.display = 'block';
+
+      setTimeout(() => {
+        messageEl.style.display = 'none';
+      }, 2000);
+    }
+
+    function updateWSStatus(connected) {
+      const statusEl = document.getElementById('ws-status');
+      const textEl = document.getElementById('ws-text');
+      
+      if (connected) {
+        statusEl.className = 'status-indicator status-connected';
+        textEl.textContent = '已連接';
+      } else {
+        statusEl.className = 'status-indicator status-disconnected';
+        textEl.textContent = '未連接';
+      }
+    }
+  </script>
+</body>
+</html>

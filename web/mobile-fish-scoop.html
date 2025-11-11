@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🎣 撈魚控制器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+
+    #container {
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+      margin-bottom: 30px;
+    }
+
+    #status-panel {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 30px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 15px 0;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+    }
+
+    .status-label {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .status-value {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-left: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .indicator-green {
+      background: #4caf50;
+      box-shadow: 0 0 10px #4caf50;
+    }
+
+    .indicator-red {
+      background: #f44336;
+      box-shadow: 0 0 10px #f44336;
+    }
+
+    .indicator-yellow {
+      background: #ffc107;
+      box-shadow: 0 0 10px #ffc107;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    #scoop-button {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+      border: 8px solid rgba(255, 255, 255, 0.3);
+      font-size: 64px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 30px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #scoop-button:active {
+      transform: scale(0.95);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    #scoop-button.ready {
+      background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+      animation: readyGlow 1.5s infinite;
+    }
+
+    #scoop-button.disabled {
+      background: linear-gradient(135deg, #999 0%, #666 100%);
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    @keyframes readyGlow {
+      0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(76, 175, 80, 0.7); }
+      50% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 0 20px rgba(76, 175, 80, 0); }
+    }
+
+    .button-label {
+      font-size: 16px;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+
+    #motion-data {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 15px;
+      padding: 15px;
+      font-size: 12px;
+      line-height: 1.8;
+      font-family: 'Courier New', monospace;
+    }
+
+    .motion-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+
+    #instruction {
+      margin-top: 20px;
+      font-size: 14px;
+      opacity: 0.8;
+      line-height: 1.6;
+    }
+
+    #debug-info {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      font-size: 11px;
+      text-align: left;
+      font-family: 'Courier New', monospace;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    #feedback-message {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(76, 175, 80, 0.95);
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 1000;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes slideDown {
+      from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+      to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+
+    .score-display {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    #permission-prompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    #permission-prompt.show {
+      display: flex;
+    }
+
+    .prompt-content {
+      background: white;
+      color: #333;
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 400px;
+    }
+
+    .prompt-content h2 {
+      margin-bottom: 15px;
+      color: #667eea;
+    }
+
+    .prompt-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 20px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .prompt-button:active {
+      transform: scale(0.95);
+    }
+
+    .mode-switch {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .mode-switch button {
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin: 5px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .mode-switch button.active {
+      background: rgba(76, 175, 80, 0.5);
+      border-color: #4caf50;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="permission-prompt">
+    <div class="prompt-content">
+      <h2>🎣 撈魚遊戲</h2>
+      <p style="margin-bottom: 20px;">選擇控制方式</p>
+      
+      <button class="prompt-button" onclick="useButtonMode()" style="background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);">
+        👆 使用按鈕模式<br>
+        <span style="font-size: 12px; opacity: 0.9;">(推薦 - 適用所有裝置)</span>
+      </button>
+      
+      <button class="prompt-button" onclick="requestMotionPermission()" style="margin-top: 10px;">
+        📱 使用動作感測器<br>
+        <span style="font-size: 12px; opacity: 0.9;">(需要權限)</span>
+      </button>
+      
+      <p style="font-size: 11px; opacity: 0.6; margin-top: 15px;">
+        ⚠️ iOS 16+ 動作感測器權限受限<br>
+        建議使用按鈕模式
+      </p>
+    </div>
+  </div>
+
+  <div id="feedback-message"></div>
+
+  <div id="container">
+    <h1>🎣 撈魚控制器</h1>
+    <div class="subtitle">
+      <span id="control-mode-text">按下按鈕撈魚！</span>
+    </div>
+
+    <div class="mode-switch">
+      <div style="font-size: 12px; margin-bottom: 10px; opacity: 0.8;">控制模式</div>
+      <button id="btn-mode-button" class="active" onclick="switchToButtonMode()">👆 按鈕</button>
+      <button id="btn-mode-motion" onclick="switchToMotionMode()">📱 動作</button>
+    </div>
+
+    <div id="status-panel">
+      <div class="status-row">
+        <span class="status-label">連線狀態</span>
+        <span class="status-value" id="ws-status">
+          連接中...
+          <span class="status-indicator indicator-yellow"></span>
+        </span>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">距離感測</span>
+        <span class="status-value" id="distance-status">
+          -- cm
+          <span class="status-indicator indicator-red" id="distance-indicator"></span>
+        </span>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">動作感測</span>
+        <span class="status-value" id="motion-status">
+          準備中...
+          <span class="status-indicator indicator-yellow" id="motion-indicator"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="score-display">🐟 <span id="score">0</span></div>
+
+    <button id="scoop-button" class="disabled">
+      🎣
+      <div class="button-label">撈魚</div>
+    </button>
+
+    <div id="motion-data">
+      <div class="motion-row">
+        <span>加速度 X:</span>
+        <span id="accel-x">0.00</span>
+      </div>
+      <div class="motion-row">
+        <span>加速度 Y:</span>
+        <span id="accel-y">0.00</span>
+      </div>
+      <div class="motion-row">
+        <span>加速度 Z:</span>
+        <span id="accel-z">0.00</span>
+      </div>
+      <div class="motion-row">
+        <span>總加速度:</span>
+        <span id="accel-total">0.00</span>
+      </div>
+      <div class="motion-row">
+        <span>撈魚動作:</span>
+        <span id="scoop-detected">待偵測</span>
+      </div>
+    </div>
+
+    <div id="instruction">
+      ℹ️ 使用說明：<br>
+      1️⃣ 靠近大螢幕（距離 < 10cm）<br>
+      <span id="instruction-mode">
+        2️⃣ <strong>按下按鈕</strong>撈魚<br>
+      </span>
+      3️⃣ 撈起魚池中的魚！
+    </div>
+
+    <div id="debug-info">
+      <strong>🔍 診斷資訊：</strong><br>
+      <span id="debug-output">載入中...</span>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 設定 ====================
+    const WS_URL = 'ws://192.168.100.200:8080';
+    const SCOOP_TOPIC = 'esp32/fish/scoop';
+    const JOIN_TOPIC = 'esp32/fish/join';
+    const PLAYER_ID = 'player-' + Math.random().toString(36).substr(2, 9);
+
+    // ==================== 狀態變數 ====================
+    let ws;
+    let wsConnected = false;
+    let motionEnabled = false;
+    let buttonMode = true;  // 預設使用按鈕模式
+    let currentDistance = 999;
+    let distanceNear = false;
+    let score = 0;
+
+    // 動作偵測參數
+    let lastAcceleration = { x: 0, y: 0, z: 0 };
+    let scoopCooldown = false;
+    const SCOOP_THRESHOLD = 15;      // 撈魚動作閾值（向上加速度）
+    const COOLDOWN_TIME = 1000;      // 冷卻時間 (ms)
+
+    // ==================== 初始化 ====================
+    window.addEventListener('load', () => {
+      console.log('🎣 撈魚控制器啟動');
+      console.log('📱 裝置資訊:');
+      console.log('  - User Agent:', navigator.userAgent);
+      console.log('  - Platform:', navigator.platform);
+      console.log('  - DeviceMotionEvent 存在:', typeof DeviceMotionEvent !== 'undefined');
+      console.log('  - requestPermission 存在:', 
+        typeof DeviceMotionEvent !== 'undefined' && 
+        typeof DeviceMotionEvent.requestPermission === 'function');
+      
+      // 更新診斷資訊
+      updateDebugInfo();
+      
+      // 顯示模式選擇
+      document.getElementById('permission-prompt').classList.add('show');
+
+      // 連接 WebSocket
+      connectWebSocket();
+
+      // 按鈕事件
+      document.getElementById('scoop-button').addEventListener('click', () => {
+        if (buttonMode && !scoopCooldown && distanceNear) {
+          performScoop();
+          triggerButtonCooldown();
+        }
+      });
+    });
+
+    // ==================== 模式切換 ====================
+    function useButtonMode() {
+      console.log('👆 啟用按鈕模式');
+      buttonMode = true;
+      motionEnabled = false;
+      document.getElementById('permission-prompt').classList.remove('show');
+      document.getElementById('control-mode-text').textContent = '按下按鈕撈魚！';
+      document.getElementById('btn-mode-button').classList.add('active');
+      document.getElementById('btn-mode-motion').classList.remove('active');
+      document.getElementById('instruction-mode').innerHTML = '2️⃣ <strong>按下按鈕</strong>撈魚<br>';
+      updateMotionStatus(false);
+      showFeedback('✅ 按鈕模式已啟用', '#4caf50');
+    }
+
+    function switchToButtonMode() {
+      console.log('切換到按鈕模式');
+      if (motionEnabled) {
+        window.removeEventListener('devicemotion', handleMotion);
+      }
+      useButtonMode();
+    }
+
+    function switchToMotionMode() {
+      console.log('切換到動作模式');
+      buttonMode = false;
+      document.getElementById('btn-mode-button').classList.remove('active');
+      document.getElementById('btn-mode-motion').classList.add('active');
+      document.getElementById('control-mode-text').textContent = '向上快速揮動手機撈魚！';
+      document.getElementById('instruction-mode').innerHTML = '2️⃣ <strong>向上快速揮動手機</strong><br>';
+      requestMotionPermission();
+    }
+
+    function triggerButtonCooldown() {
+      scoopCooldown = true;
+      const button = document.getElementById('scoop-button');
+      button.style.opacity = '0.5';
+      
+      setTimeout(() => {
+        scoopCooldown = false;
+        button.style.opacity = '1';
+      }, COOLDOWN_TIME);
+    }
+
+    // ==================== 診斷工具 ====================
+    function updateDebugInfo() {
+      const info = [];
+      info.push('User Agent: ' + navigator.userAgent.substring(0, 50) + '...');
+      info.push('Protocol: ' + window.location.protocol);
+      info.push('Host: ' + window.location.host);
+      info.push('DeviceMotionEvent: ' + (typeof DeviceMotionEvent !== 'undefined' ? '✅' : '❌'));
+      info.push('requestPermission: ' + (
+        typeof DeviceMotionEvent !== 'undefined' && 
+        typeof DeviceMotionEvent.requestPermission === 'function' ? '✅ (iOS 13+)' : '❌'
+      ));
+      info.push('HTTPS: ' + (window.location.protocol === 'https:' ? '✅' : '⚠️'));
+      
+      document.getElementById('debug-output').innerHTML = info.join('<br>');
+    }
+
+    // ==================== 權限請求 (iOS) ====================
+    function requestMotionPermission() {
+      console.log('🔐 請求動作感測器權限');
+      console.log('📱 裝置檢測:');
+      console.log('  - DeviceMotionEvent:', typeof DeviceMotionEvent);
+      console.log('  - requestPermission:', 
+        typeof DeviceMotionEvent !== 'undefined' ? typeof DeviceMotionEvent.requestPermission : 'undefined');
+      
+      if (typeof DeviceMotionEvent !== 'undefined' && 
+          typeof DeviceMotionEvent.requestPermission === 'function') {
+        console.log('📱 iOS 13+ 裝置，請求權限中...');
+        
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            console.log('✅ 權限狀態:', permissionState);
+            
+            if (permissionState === 'granted') {
+              document.getElementById('permission-prompt').classList.remove('show');
+              startMotionDetection();
+              showFeedback('✅ 感測器已啟用', '#4caf50');
+            } else {
+              console.error('❌ 權限被拒絕:', permissionState);
+              
+              alert('⚠️ 權限被拒絕！\n\niOS 16+ 可能無法使用動作感測器\n\n建議使用「按鈕模式」代替');
+              
+              // 自動切換回按鈕模式
+              useButtonMode();
+            }
+          })
+          .catch(err => {
+            console.error('❌ 權限請求失敗:', err);
+            console.error('錯誤詳情:', err.message, err.stack);
+            
+            alert('❌ 無法啟用動作感測器\n\n' + err.message + '\n\n已自動切換為「按鈕模式」');
+            
+            // 自動切換回按鈕模式
+            useButtonMode();
+          });
+      } else {
+        console.log('📱 Android 或舊版 iOS，直接啟用');
+        document.getElementById('permission-prompt').classList.remove('show');
+        
+        // 嘗試直接啟動
+        try {
+          startMotionDetection();
+          showFeedback('✅ 感測器已啟用', '#4caf50');
+        } catch (err) {
+          console.error('❌ 啟動失敗:', err);
+          alert('❌ 無法啟動感測器\n\n已切換為「按鈕模式」');
+          useButtonMode();
+        }
+      }
+    }
+
+    // ==================== 動作偵測 ====================
+    function startMotionDetection() {
+      console.log('🎮 啟動動作感測器');
+
+      if (typeof DeviceMotionEvent === 'undefined') {
+        console.error('❌ 此裝置不支援動作感測器');
+        alert('此裝置不支援動作感測器！\n\n已切換為「按鈕模式」');
+        useButtonMode();
+        return;
+      }
+
+      try {
+        window.addEventListener('devicemotion', handleMotion);
+        
+        buttonMode = false;
+        motionEnabled = true;
+        updateMotionStatus(true);
+        
+        console.log('✅ 動作感測器已啟動，開始監聽...');
+        
+        // 延遲測試是否真的有收到資料
+        setTimeout(() => {
+          if (lastAcceleration.x === 0 && lastAcceleration.y === 0 && lastAcceleration.z === 0) {
+            console.warn('⚠️ 未收到動作資料，切換回按鈕模式');
+            alert('⚠️ 未收到感測器資料\n\n已自動切換為「按鈕模式」');
+            switchToButtonMode();
+          }
+        }, 3000);
+      } catch (err) {
+        console.error('❌ 啟動動作感測器失敗:', err);
+        alert('啟動感測器失敗\n\n已切換為「按鈕模式」');
+        useButtonMode();
+      }
+    }
+
+    function handleMotion(event) {
+      if (!motionEnabled) return;
+
+      const accel = event.accelerationIncludingGravity;
+      
+      if (!accel) {
+        console.warn('無法讀取加速度資料');
+        return;
+      }
+
+      const x = accel.x || 0;
+      const y = accel.y || 0;
+      const z = accel.z || 0;
+
+      // 計算總加速度
+      const total = Math.sqrt(x * x + y * y + z * z);
+
+      // 更新顯示
+      document.getElementById('accel-x').textContent = x.toFixed(2);
+      document.getElementById('accel-y').textContent = y.toFixed(2);
+      document.getElementById('accel-z').textContent = z.toFixed(2);
+      document.getElementById('accel-total').textContent = total.toFixed(2);
+
+      // 偵測撈魚動作（向上快速加速 = Y 軸負向大幅變化）
+      const yAccelChange = Math.abs(y - lastAcceleration.y);
+      
+      // 撈魚動作：Y 軸向上加速（負值變大）且變化量超過閾值
+      if (y < -SCOOP_THRESHOLD && yAccelChange > SCOOP_THRESHOLD && !scoopCooldown) {
+        detectScoop();
+      }
+
+      // 儲存當前值
+      lastAcceleration = { x, y, z };
+    }
+
+    function detectScoop() {
+      console.log('🎣 偵測到撈魚動作！');
+      
+      document.getElementById('scoop-detected').textContent = '✅ 已偵測！';
+      document.getElementById('scoop-detected').style.color = '#4caf50';
+
+      // 視覺回饋
+      const button = document.getElementById('scoop-button');
+      button.style.transform = 'scale(1.1)';
+      setTimeout(() => {
+        button.style.transform = 'scale(1)';
+      }, 200);
+
+      // 執行撈魚
+      performScoop();
+
+      // 冷卻時間
+      scoopCooldown = true;
+      setTimeout(() => {
+        scoopCooldown = false;
+        document.getElementById('scoop-detected').textContent = '待偵測';
+        document.getElementById('scoop-detected').style.color = 'white';
+      }, COOLDOWN_TIME);
+    }
+
+    function performScoop() {
+      if (!wsConnected) {
+        showFeedback('⚠️ 未連接伺服器', '#ff9800');
+        return;
+      }
+
+      console.log(`🎣 執行撈魚！距離: ${currentDistance}cm, 準備狀態: ${distanceNear}`);
+
+      // 發送撈魚訊息到 MQTT
+      const message = {
+        type: 'publish',
+        topic: SCOOP_TOPIC,
+        payload: JSON.stringify({
+          playerId: PLAYER_ID,
+          timestamp: Date.now(),
+          distance: currentDistance,
+          ready: distanceNear
+        })
+      };
+
+      ws.send(JSON.stringify(message));
+
+      // 震動回饋（如果支援）
+      if (navigator.vibrate) {
+        navigator.vibrate(200);
+      }
+
+      showFeedback('🎣 撈魚！', '#2196f3');
+    }
+
+    // ==================== WebSocket ====================
+    function connectWebSocket() {
+      console.log('🌐 連接 WebSocket...');
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket 已連接');
+        wsConnected = true;
+        updateWSStatus(true);
+
+        // 發送加入遊戲訊息
+        const joinMessage = {
+          type: 'publish',
+          topic: JOIN_TOPIC,
+          payload: JSON.stringify({
+            playerId: PLAYER_ID,
+            name: `玩家 ${PLAYER_ID.substr(-4)}`,
+            timestamp: Date.now()
+          })
+        };
+        ws.send(JSON.stringify(joinMessage));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (err) {
+          console.error('解析訊息錯誤:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        updateWSStatus(false);
+      };
+
+      ws.onclose = () => {
+        console.log('⚠️ WebSocket 已斷線，5秒後重連...');
+        wsConnected = false;
+        updateWSStatus(false);
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    function handleWebSocketMessage(data) {
+      // 處理 MQTT 訊息
+      if (data.type === 'mqtt_message') {
+        const topic = data.topic;
+        const payload = data.payload;
+
+        // 距離感測器數據
+        if (topic.includes('/distance')) {
+          try {
+            const distanceData = JSON.parse(payload);
+            updateDistance(distanceData.distance, distanceData.valid);
+          } catch (err) {
+            console.error('解析距離數據錯誤:', err);
+          }
+        }
+      }
+    }
+
+    // ==================== UI 更新 ====================
+    function updateDistance(distance, valid) {
+      if (valid && distance >= 0) {
+        currentDistance = Math.round(distance);
+        distanceNear = (distance < 10);
+
+        document.getElementById('distance-status').innerHTML = `
+          ${currentDistance} cm
+          <span class="status-indicator ${distanceNear ? 'indicator-green' : 'indicator-red'}" id="distance-indicator"></span>
+        `;
+
+        // 更新按鈕狀態
+        const button = document.getElementById('scoop-button');
+        if (distanceNear && (buttonMode || motionEnabled)) {
+          button.classList.remove('disabled');
+          button.classList.add('ready');
+        } else {
+          button.classList.add('disabled');
+          button.classList.remove('ready');
+        }
+      }
+    }
+
+    function updateWSStatus(connected) {
+      const statusEl = document.getElementById('ws-status');
+      
+      if (connected) {
+        statusEl.innerHTML = `
+          已連接
+          <span class="status-indicator indicator-green"></span>
+        `;
+      } else {
+        statusEl.innerHTML = `
+          未連接
+          <span class="status-indicator indicator-red"></span>
+        `;
+      }
+    }
+
+    function updateMotionStatus(enabled) {
+      const statusEl = document.getElementById('motion-status');
+      
+      if (enabled) {
+        statusEl.innerHTML = `
+          已啟用
+          <span class="status-indicator indicator-green" id="motion-indicator"></span>
+        `;
+      } else {
+        statusEl.innerHTML = `
+          未啟用
+          <span class="status-indicator indicator-red" id="motion-indicator"></span>
+        `;
+      }
+    }
+
+    function showFeedback(message, color) {
+      const feedbackEl = document.getElementById('feedback-message');
+      feedbackEl.textContent = message;
+      feedbackEl.style.background = color;
+      feedbackEl.style.display = 'block';
+
+      setTimeout(() => {
+        feedbackEl.style.display = 'none';
+      }, 2000);
+    }
+
+    function updateScore(newScore) {
+      score = newScore;
+      document.getElementById('score').textContent = score;
+    }
+  </script>
+</body>
+</html>

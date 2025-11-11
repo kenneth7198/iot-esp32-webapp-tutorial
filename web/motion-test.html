@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>動作感測器測試</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .info-box {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-weight: bold;
+      opacity: 0.8;
+    }
+
+    .value {
+      font-family: 'Courier New', monospace;
+      text-align: right;
+    }
+
+    .status-ok {
+      color: #4caf50;
+    }
+
+    .status-warning {
+      color: #ff9800;
+    }
+
+    .status-error {
+      color: #f44336;
+    }
+
+    button {
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+      border: none;
+      border-radius: 15px;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 15px;
+      transition: transform 0.2s;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    button:disabled {
+      background: #999;
+      opacity: 0.5;
+    }
+
+    #log {
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 15px;
+      padding: 15px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+    }
+
+    .data-display {
+      font-size: 24px;
+      text-align: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 15px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 動作感測器診斷工具</h1>
+
+    <div class="info-box">
+      <h3 style="margin-bottom: 15px;">📱 裝置資訊</h3>
+      <div class="info-row">
+        <span class="label">瀏覽器:</span>
+        <span class="value" id="browser">-</span>
+      </div>
+      <div class="info-row">
+        <span class="label">作業系統:</span>
+        <span class="value" id="os">-</span>
+      </div>
+      <div class="info-row">
+        <span class="label">協定:</span>
+        <span class="value" id="protocol">-</span>
+      </div>
+      <div class="info-row">
+        <span class="label">DeviceMotionEvent:</span>
+        <span class="value" id="motion-support">-</span>
+      </div>
+      <div class="info-row">
+        <span class="label">需要權限請求:</span>
+        <span class="value" id="permission-required">-</span>
+      </div>
+    </div>
+
+    <button id="request-permission" onclick="requestPermission()">
+      🔐 請求感測器權限
+    </button>
+
+    <button id="start-sensor" onclick="startSensor()" disabled>
+      ▶️ 開始感測
+    </button>
+
+    <div class="data-display" id="sensor-data">
+      <div>加速度: <span id="accel">0.00</span></div>
+    </div>
+
+    <div class="info-box">
+      <h3 style="margin-bottom: 10px;">📋 日誌</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <script>
+    let sensorStarted = false;
+
+    // 初始化
+    window.addEventListener('load', () => {
+      log('✅ 頁面載入完成');
+      detectDevice();
+    });
+
+    function log(message) {
+      const timestamp = new Date().toLocaleTimeString('zh-TW', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      });
+      
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${timestamp}] ${message}`;
+      
+      const logContainer = document.getElementById('log');
+      logContainer.insertBefore(entry, logContainer.firstChild);
+      
+      console.log(message);
+    }
+
+    function detectDevice() {
+      const ua = navigator.userAgent;
+      
+      // 檢測瀏覽器
+      let browser = 'Unknown';
+      if (ua.includes('Safari') && !ua.includes('Chrome')) {
+        browser = 'Safari';
+      } else if (ua.includes('Chrome')) {
+        browser = 'Chrome';
+      } else if (ua.includes('Firefox')) {
+        browser = 'Firefox';
+      }
+      document.getElementById('browser').textContent = browser;
+      
+      // 檢測作業系統
+      let os = 'Unknown';
+      if (ua.includes('iPhone')) {
+        os = 'iOS (iPhone)';
+      } else if (ua.includes('iPad')) {
+        os = 'iOS (iPad)';
+      } else if (ua.includes('Android')) {
+        os = 'Android';
+      } else if (ua.includes('Mac')) {
+        os = 'macOS';
+      } else if (ua.includes('Windows')) {
+        os = 'Windows';
+      }
+      document.getElementById('os').textContent = os;
+      
+      // 協定
+      const protocol = window.location.protocol;
+      const protocolEl = document.getElementById('protocol');
+      protocolEl.textContent = protocol;
+      if (protocol === 'https:') {
+        protocolEl.className = 'value status-ok';
+      } else {
+        protocolEl.className = 'value status-warning';
+      }
+      
+      // DeviceMotionEvent
+      const hasMotion = typeof DeviceMotionEvent !== 'undefined';
+      const motionEl = document.getElementById('motion-support');
+      motionEl.textContent = hasMotion ? '✅ 支援' : '❌ 不支援';
+      motionEl.className = hasMotion ? 'value status-ok' : 'value status-error';
+      
+      // 權限請求
+      const needsPermission = hasMotion && typeof DeviceMotionEvent.requestPermission === 'function';
+      const permEl = document.getElementById('permission-required');
+      permEl.textContent = needsPermission ? '✅ 是 (iOS 13+)' : '❌ 否';
+      permEl.className = 'value';
+      
+      log(`📱 偵測到: ${browser} on ${os}`);
+      log(`🔒 協定: ${protocol}`);
+      log(`📲 DeviceMotionEvent: ${hasMotion ? '支援' : '不支援'}`);
+      log(`🔐 需要權限: ${needsPermission ? '是' : '否'}`);
+      
+      // 如果不需要權限，直接啟用按鈕
+      if (!needsPermission && hasMotion) {
+        document.getElementById('request-permission').disabled = true;
+        document.getElementById('start-sensor').disabled = false;
+        log('ℹ️ 不需要權限請求，可直接開始感測');
+      }
+    }
+
+    function requestPermission() {
+      log('🔐 請求權限...');
+      
+      if (typeof DeviceMotionEvent === 'undefined') {
+        log('❌ 此裝置不支援 DeviceMotionEvent');
+        alert('此裝置不支援動作感測器！');
+        return;
+      }
+      
+      if (typeof DeviceMotionEvent.requestPermission !== 'function') {
+        log('ℹ️ 不需要權限請求（Android 或舊版 iOS）');
+        document.getElementById('start-sensor').disabled = false;
+        startSensor();
+        return;
+      }
+      
+      log('📱 呼叫 DeviceMotionEvent.requestPermission()...');
+      
+      DeviceMotionEvent.requestPermission()
+        .then(state => {
+          log(`✅ 權限狀態: ${state}`);
+          
+          if (state === 'granted') {
+            document.getElementById('start-sensor').disabled = false;
+            log('✅ 權限已授予！可以開始感測');
+            alert('✅ 權限已授予！\n請點擊「開始感測」按鈕');
+          } else {
+            log(`❌ 權限被拒絕: ${state}`);
+            
+            // 偵測 iOS 版本
+            const iOSVersion = navigator.userAgent.match(/OS (\d+)_/);
+            const version = iOSVersion ? parseInt(iOSVersion[1]) : 0;
+            
+            let guide = '';
+            if (version >= 14) {
+              guide = '📱 iOS 14.5+ 設定方法：\n\n' +
+                '方法 1（推薦）：\n' +
+                '1. 點擊網址列左側「aA」按鈕\n' +
+                '2. 選擇「網站設定」\n' +
+                '3. 開啟「動作與方向」\n' +
+                '4. 重新整理頁面\n\n' +
+                '方法 2：\n' +
+                '設定 → Safari → 進階 → 網站資料\n' +
+                '找到此網站並允許動作權限';
+            } else {
+              guide = '請到：\n設定 → Safari → 動作與方向存取\n然後重新整理頁面';
+            }
+            
+            alert(`❌ 權限被拒絕！\n\n狀態: ${state}\n\n${guide}`);
+          }
+        })
+        .catch(err => {
+          log(`❌ 權限請求失敗: ${err.name} - ${err.message}`);
+          console.error('詳細錯誤:', err);
+          
+          let errorGuide = '';
+          if (err.name === 'NotAllowedError') {
+            errorGuide = '\n可能原因：\n' +
+              '• 必須透過用戶點擊觸發（已確認✓）\n' +
+              '• Safari 安全設定阻擋\n' +
+              '• 無痕模式限制\n\n' +
+              '解決方法：\n' +
+              '• 關閉無痕模式\n' +
+              '• 重新啟動 Safari\n' +
+              '• 清除網站資料後重試';
+          }
+          
+          alert(`❌ 權限請求失敗！\n\n${err.message}${errorGuide}\n\n請確認：\n1. 使用 Safari 瀏覽器\n2. 不在無痕模式\n3. iOS 13 以上版本`);
+        });
+    }
+
+    function startSensor() {
+      if (sensorStarted) {
+        log('⚠️ 感測器已在運行中');
+        return;
+      }
+      
+      log('▶️ 啟動感測器...');
+      
+      try {
+        window.addEventListener('devicemotion', handleMotion);
+        sensorStarted = true;
+        document.getElementById('start-sensor').textContent = '⏸️ 停止感測';
+        document.getElementById('start-sensor').onclick = stopSensor;
+        log('✅ 感測器已啟動，移動裝置看看！');
+      } catch (err) {
+        log(`❌ 啟動失敗: ${err.message}`);
+        alert(`無法啟動感測器：${err.message}`);
+      }
+    }
+
+    function stopSensor() {
+      window.removeEventListener('devicemotion', handleMotion);
+      sensorStarted = false;
+      document.getElementById('start-sensor').textContent = '▶️ 開始感測';
+      document.getElementById('start-sensor').onclick = startSensor;
+      log('⏹️ 感測器已停止');
+    }
+
+    let dataCount = 0;
+    function handleMotion(event) {
+      const accel = event.accelerationIncludingGravity;
+      
+      if (!accel) {
+        log('⚠️ 無法讀取加速度資料');
+        return;
+      }
+      
+      const x = accel.x || 0;
+      const y = accel.y || 0;
+      const z = accel.z || 0;
+      const total = Math.sqrt(x * x + y * y + z * z);
+      
+      document.getElementById('accel').textContent = total.toFixed(2);
+      
+      dataCount++;
+      if (dataCount === 1) {
+        log('✅ 成功接收到感測器資料！');
+      }
+      if (dataCount % 50 === 0) {
+        log(`📊 已接收 ${dataCount} 筆資料`);
+      }
+    }
+  </script>
+</body>
+</html>

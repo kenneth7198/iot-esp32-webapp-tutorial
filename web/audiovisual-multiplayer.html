@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎨🎵 Audiovisual Multiplayer Art</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/addons/p5.sound.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -307,6 +306,7 @@
     const WS_URL = 'ws://192.168.100.200:8080';
     let myDeviceId = '';
     let ws = null;
+    let systemStarted = false; // 系統是否已啟動
 
     // ========== 玩家管理 ==========
     const players = new Map();
@@ -382,6 +382,9 @@
       
       frameRate(50);
       time = rez = 0;
+      
+      // 初始化完成，但等待用戶點擊「開始體驗」
+      console.log('🎨 p5.js 已初始化，等待啟動...');
     }
     
     // ========== 初始化 Shader (SamuelYAN Style) ==========
@@ -562,9 +565,22 @@
 
     // ========== p5.js Draw ==========
     function draw() {
+      // 如果系統未啟動，顯示靜態黑色背景
+      if (!systemStarted) {
+        background(0);
+        return;
+      }
+      
+      // 使用半透明黑色背景創造拖尾效果
       background(0, 0, 0, 10);
       time += 0.01;
       
+      // 確保畫布正確繪製
+      if (!currentMode) {
+        currentMode = 'neurons'; // 預設模式
+      }
+      
+      // 繪製動畫
       switch(currentMode) {
         case '3dheart':
           draw3DHeartPattern();
@@ -577,6 +593,10 @@
           break;
         case 'shader':
           drawShaderPattern();
+          break;
+        default:
+          // 預設顯示神經網路
+          drawNeuronsPattern();
           break;
       }
     }
@@ -1264,8 +1284,27 @@
       }
     }
 
-    // ========== 創建豐富的音色合成器 ==========
+    // ========== 樂器音色定義 ==========
+    const instruments = [
+      { name: '鋼琴', type: 'sine', harmonics: [1, 2, 3, 4, 5, 6, 7, 8], gains: [1.0, 0.6, 0.4, 0.25, 0.15, 0.1, 0.08, 0.05], attack: 0.005, decay: 0.05, release: 0.25 },
+      { name: '合成器', type: 'sawtooth', harmonics: [1, 2, 3, 4], gains: [1.0, 0.5, 0.3, 0.2], attack: 0.02, decay: 0.1, release: 0.3 },
+      { name: '貝斯', type: 'triangle', harmonics: [1, 2], gains: [1.0, 0.3], attack: 0.01, decay: 0.08, release: 0.2 },
+      { name: '木琴', type: 'sine', harmonics: [1, 3, 5, 7], gains: [1.0, 0.4, 0.2, 0.1], attack: 0.001, decay: 0.02, release: 0.15 },
+      { name: '電子音', type: 'square', harmonics: [1, 2, 4], gains: [1.0, 0.6, 0.3], attack: 0.005, decay: 0.05, release: 0.2 },
+      { name: '弦樂', type: 'sine', harmonics: [1, 2, 3, 4, 5], gains: [1.0, 0.7, 0.5, 0.3, 0.2], attack: 0.1, decay: 0.2, release: 0.5 },
+      { name: '鼓聲', type: 'sine', harmonics: [1, 1.5, 2.5], gains: [1.0, 0.5, 0.3], attack: 0.001, decay: 0.02, release: 0.1 },
+      { name: '鐘聲', type: 'sine', harmonics: [1, 2.76, 5.4, 8.93], gains: [1.0, 0.6, 0.4, 0.2], attack: 0.002, decay: 0.05, release: 0.8 },
+      { name: '笛子', type: 'sine', harmonics: [1, 2, 3], gains: [1.0, 0.3, 0.1], attack: 0.05, decay: 0.1, release: 0.3 }
+    ];
+
+    // ========== 創建多樂器音色合成器 ==========
     function createSynth(deviceId, color, noteIndex) {
+      // 根據玩家索引選擇樂器
+      const instrumentIndex = noteIndex % instruments.length;
+      const instrument = instruments[instrumentIndex];
+      
+      console.log(`🎸 為玩家選擇樂器: ${instrument.name} (索引 ${instrumentIndex})`);
+      
       // 音階: 五聲音階混合自然音階,更豐富的音域
       const scale = [
         130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, // 低音區
@@ -1274,34 +1313,22 @@
       ];
       const frequency = scale[noteIndex % scale.length];
       
-      // 🎹 更豐富的諧波結構 (8 個諧波)
-      const harmonics = [
-        { freq: 1, gain: 1.0, detune: 0 },        // 基頻
-        { freq: 2, gain: 0.6, detune: 2 },        // 第二諧波 (稍微失諧)
-        { freq: 3, gain: 0.4, detune: -3 },       // 第三諧波
-        { freq: 4, gain: 0.25, detune: 1 },       // 第四諧波
-        { freq: 5, gain: 0.15, detune: -2 },      // 第五諧波
-        { freq: 6, gain: 0.1, detune: 3 },        // 第六諧波
-        { freq: 7, gain: 0.08, detune: -1 },      // 第七諧波
-        { freq: 8, gain: 0.05, detune: 2 },       // 第八諧波
-      ];
-      
       const oscillators = [];
       const gainNodes = [];
       
-      // 創建多個振盪器模擬豐富的泛音,並添加失諧效果
-      harmonics.forEach(harmonic => {
+      // 🎸 根據樂器類型創建振盪器和諧波
+      instrument.harmonics.forEach((harmonic, index) => {
         const osc = audioContext.createOscillator();
-        osc.type = 'sine'; // 使用正弦波疊加
-        osc.frequency.value = frequency * harmonic.freq;
-        osc.detune.value = harmonic.detune; // 添加微小失諧,讓聲音更有生命力
+        osc.type = instrument.type; // 不同樂器使用不同波形
+        osc.frequency.value = frequency * harmonic;
+        osc.detune.value = Math.random() * 4 - 2; // 隨機微小失諧,增加生命力
         
         const gain = audioContext.createGain();
         gain.gain.value = 0;
         
         osc.connect(gain);
         oscillators.push(osc);
-        gainNodes.push({ node: gain, maxGain: harmonic.gain });
+        gainNodes.push({ node: gain, maxGain: instrument.gains[index] });
       });
       
       // 添加低頻振盪器 (LFO) 用於調製
@@ -1349,29 +1376,29 @@
       const delayGain = audioContext.createGain();
       delayGain.gain.value = 0.5; // 大幅增加延遲 (從 0.3 提升到 0.5)
       
-      // 連接所有節點 - 更複雜的訊號鏈
-      gainNodes.forEach(g => g.node.connect(masterGainNode));
-      masterGainNode.connect(filter2); // 先高通濾波
-      filter2.connect(filter1);         // 再低通濾波
-      filter1.connect(compressor);      // 壓縮
+      // 🔍 簡化連接 - 直接連接測試
+      console.log('🔗 開始連接音訊節點...');
+      console.log('  gainNodes 數量:', gainNodes.length);
+      console.log('  masterGain 存在:', !!masterGain);
+      console.log('  masterGain.gain.value:', masterGain.gain.value);
       
-      // 乾音路徑
-      compressor.connect(masterGain);
+      // 簡單的直接連接：振盪器 → 增益 → masterGain → destination
+      gainNodes.forEach((g, i) => {
+        g.node.connect(masterGain);  // 直接連接到全局 masterGain
+        console.log(`  ✅ 增益節點 ${i} 已連接到 masterGain`);
+      });
       
-      // 濕音路徑 1: 殘響
-      compressor.connect(convolver);
-      convolver.connect(reverbGain);
-      reverbGain.connect(masterGain);
-      
-      // 濕音路徑 2: 延遲
-      compressor.connect(delay);
-      delay.connect(delayGain);
-      delayGain.connect(delay); // 反饋延遲
-      delayGain.connect(masterGain);
+      console.log('✅ 所有音訊節點連接完成');
       
       // 啟動所有振盪器和 LFO
-      oscillators.forEach(osc => osc.start());
+      console.log('🎵 準備啟動振盪器, audioContext 狀態:', audioContext.state);
+      oscillators.forEach((osc, i) => {
+        osc.start();
+        console.log(`  ✅ 振盪器 ${i} 已啟動, 頻率: ${osc.frequency.value.toFixed(2)} Hz`);
+      });
       lfo.start();
+      console.log('✅ LFO 已啟動');
+      console.log('✅ 合成器創建完成, 頻率:', frequency.toFixed(2), 'Hz');
       
       return {
         oscillators,
@@ -1382,47 +1409,50 @@
         lfo,
         attack: () => {
           const now = audioContext.currentTime;
-          console.log('🎹 Attack 被調用, 頻率:', frequency.toFixed(2), 'Hz');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('🎹 Attack 被調用');
+          console.log('  頻率:', frequency.toFixed(2), 'Hz');
+          console.log('  audioContext 狀態:', audioContext.state);
+          console.log('  masterGain 值:', masterGain.gain.value);
+          console.log('  masterGain 連接狀態:', masterGain.numberOfOutputs > 0 ? '已連接' : '未連接');
+          console.log('  振盪器數量:', oscillators.length);
           
-          // 🎹 更有表現力的 ADSR 包絡
+          // 檢查振盪器狀態
+          let runningOscs = 0;
+          oscillators.forEach((osc, i) => {
+            console.log(`  振盪器 ${i}: 頻率=${osc.frequency.value.toFixed(2)} Hz`);
+            runningOscs++;
+          });
+          console.log('  運行中的振盪器:', runningOscs);
+          
+          // � 使用樂器定義的 ADSR 包絡
           gainNodes.forEach((g, index) => {
             g.node.gain.cancelScheduledValues(now);
             g.node.gain.setValueAtTime(0, now);
-            // 根據諧波位置調整 Attack 時間
-            const attackTime = 0.005 + (index * 0.001);
-            // 快速 Attack - 大幅提升音量 🔊
-            g.node.gain.linearRampToValueAtTime(g.maxGain * 1.5, now + attackTime);
-            // Decay to Sustain - 保持更高的持續音量
-            g.node.gain.exponentialRampToValueAtTime(g.maxGain * 0.9, now + 0.15);
+            // Attack
+            const peakGain = g.maxGain * 1.2;
+            g.node.gain.linearRampToValueAtTime(peakGain, now + instrument.attack);
+            // Decay
+            g.node.gain.exponentialRampToValueAtTime(g.maxGain * 0.3, now + instrument.attack + instrument.decay);
+            // Release
+            g.node.gain.exponentialRampToValueAtTime(0.001, now + instrument.attack + instrument.decay + instrument.release);
+            
+            console.log(`  🎵 諧波 ${index}: gain=${g.maxGain.toFixed(2)}, peak=${peakGain.toFixed(2)}`);
           });
           
-          console.log('🎵 設定了', gainNodes.length, '個諧波增益');
-          
-          // 濾波器包絡 - 更動態的音色變化
-          filter1.frequency.cancelScheduledValues(now);
-          filter1.frequency.setValueAtTime(6000, now);
-          filter1.frequency.exponentialRampToValueAtTime(4000 + (noteIndex * 150), now + 0.08);
-          
-          filter2.frequency.cancelScheduledValues(now);
-          filter2.frequency.setValueAtTime(60, now);
-          filter2.frequency.exponentialRampToValueAtTime(80, now + 0.05);
+          console.log(`✅ ${instrument.name} 音色啟動 (Attack:${instrument.attack}s, Release:${instrument.release}s)`);
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━');
         },
         release: () => {
+          // 按鈕釋放時快速衰減
           const now = audioContext.currentTime;
           
-          // 🎹 更長的 Release - 餘音繞樑 (1.2 秒)
           gainNodes.forEach((g, index) => {
             g.node.gain.cancelScheduledValues(now);
             g.node.gain.setValueAtTime(g.node.gain.value, now);
-            // 不同諧波有不同的衰減時間
-            const releaseTime = 1.2 + (index * 0.1);
-            g.node.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
+            // 快速衰減
+            g.node.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
           });
-          
-          // 濾波器緩慢關閉
-          filter1.frequency.cancelScheduledValues(now);
-          filter1.frequency.setValueAtTime(filter1.frequency.value, now);
-          filter1.frequency.exponentialRampToValueAtTime(800, now + 1.2);
         },
         stop: () => {
           const now = audioContext.currentTime;
@@ -1457,33 +1487,43 @@
     }
 
     // ========== 處理玩家互動 ==========
-    function handlePlayerInteraction(deviceId, payload) {
+    async function handlePlayerInteraction(deviceId, payload) {
       console.log('🎮 handlePlayerInteraction 被調用', { deviceId, payload });
       
       const now = Date.now();
       
-      // 確保音訊系統已啟動
+      // 確保音訊系統已初始化
+      if (!audioContext) {
+        console.log('🎵 初始化音訊系統...');
+        initAudio();
+      }
+      
+      // 確保音訊系統已啟動（等待 resume 完成）
       if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-          console.log('🔊 音訊已通過互動啟動');
-        });
+        console.log('🔊 正在啟動音訊上下文...');
+        await audioContext.resume();
+        console.log('✅ 音訊上下文已啟動, 狀態:', audioContext.state);
       }
       
       // 確保玩家存在
       if (!players.has(deviceId)) {
         const color = playerColors[colorIndex % playerColors.length];
-        const noteIndex = colorIndex % 15; // 15個音符
+        const noteIndex = Math.floor(Math.random() * 15); // 隨機音符 (0-14)
+        const instrumentIndex = Math.floor(Math.random() * instruments.length); // 隨機樂器
+        const instrumentName = instruments[instrumentIndex].name;
         colorIndex++;
         
         players.set(deviceId, {
           color: color,
           name: deviceId,
           noteIndex: noteIndex,
+          instrumentIndex: instrumentIndex, // 保存樂器索引
+          instrumentName: instrumentName,
           lastActivity: now,
           interactions: 0
         });
         
-        console.log('👤 創建新玩家:', deviceId, '音符:', noteIndex);
+        console.log(`👤 創建新玩家: ${deviceId}, 🎸 樂器: ${instrumentName}, 🎵 音符索引: ${noteIndex}`);
       }
       
       const player = players.get(deviceId);
@@ -1496,7 +1536,7 @@
         // 創建視覺效果
         createVisualEffect(player);
         
-        // 創建或觸發音訊（鋼琴音色）
+        // 創建或觸發音訊（多樂器音色）
         if (!synths.has(deviceId)) {
           const synth = createSynth(deviceId, player.color, player.noteIndex);
           synths.set(deviceId, synth);
@@ -1579,13 +1619,13 @@
     function createVisualEffect(player) {
       // 在當前模式下增加隨機性和動態變化
       // 改變旋轉速度
-      rotationSpeed = random(0.005, 0.02);
+      rotationSpeed = Math.random() * (0.02 - 0.005) + 0.005;
       
       // 改變 rez 值影響噪聲
-      rez = random(0.001, 0.02);
+      rez = Math.random() * (0.02 - 0.001) + 0.001;
       
       // 觸發時隨機改變 seed 的一部分（保持部分穩定性）
-      seed = seed + random(-100, 100);
+      seed = seed + (Math.random() * 200 - 100);
     }
 
     // ========== 更新玩家列表 ==========
@@ -1601,7 +1641,10 @@
         div.className = `player-item ${isActive ? 'active' : ''}`;
         div.innerHTML = `
           <div class="player-color" style="background: ${player.color}"></div>
-          <div class="player-name">${player.name}</div>
+          <div class="player-name">
+            ${player.name}
+            <div style="font-size: 10px; color: #00ff88; margin-top: 2px;">🎸 ${player.instrumentName || '鋼琴'}</div>
+          </div>
         `;
         playersList.appendChild(div);
       });
@@ -1625,9 +1668,13 @@
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.topic && data.topic.includes('art/button')) {
+          console.log('📨 收到 WebSocket 訊息:', data);
+          
+          // 檢查是否為 MQTT 訊息
+          if (data.type === 'mqtt_message' && data.topic && data.topic.includes('art/button')) {
             const payload = JSON.parse(data.payload);
             const deviceId = data.topic.split('/').pop();
+            console.log('🎨 藝術按鈕事件:', { deviceId, payload });
             handlePlayerInteraction(deviceId, payload);
           }
         } catch (e) {
@@ -1714,7 +1761,13 @@
         return;
       }
       
+      // 隱藏加入面板
       document.getElementById('joinPanel').classList.add('hidden');
+      
+      // 啟動系統標誌
+      systemStarted = true;
+      
+      // 啟動 WebSocket 連接
       connectWebSocket();
       
       // 恢復音訊上下文
@@ -1725,6 +1778,8 @@
       }
       
       updateModeDisplay();
+      
+      console.log('✅ 系統啟動完成, 設備 ID:', myDeviceId);
     });
     
     // ========== 模式切換按鈕 ==========

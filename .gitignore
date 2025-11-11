@@ -3,6 +3,7 @@ web/index.html
 *.sh
 *.txt
 _tmp/
+_docs/
 # Node.js
 node_modules/
 npm-debug.log*

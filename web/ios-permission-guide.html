@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>iOS 動作感測器權限設定指南</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #ffd700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step {
+      background: rgba(0, 0, 0, 0.2);
+      border-left: 4px solid #4caf50;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background: #4caf50;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    .highlight {
+      background: rgba(255, 215, 0, 0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      color: #ffd700;
+    }
+
+    .warning {
+      background: rgba(255, 152, 0, 0.2);
+      border-left: 4px solid #ff9800;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
+
+    .success {
+      background: rgba(76, 175, 80, 0.2);
+      border-left: 4px solid #4caf50;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button, a.button {
+      padding: 15px 30px;
+      background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+      border: none;
+      border-radius: 50px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    button:active, a.button:active {
+      transform: scale(0.95);
+    }
+
+    .secondary {
+      background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+    }
+
+    .ios-version {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px 15px;
+      border-radius: 10px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    code {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .emoji {
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 iOS 動作感測器權限設定</h1>
+
+    <div class="section">
+      <h2><span class="emoji">⚡</span> 快速方法（iOS 14.5+）</h2>
+      
+      <div class="step">
+        <span class="step-number">1</span>
+        點擊 Safari 網址列<strong>左側</strong>的 <span class="highlight">aA</span> 按鈕
+      </div>
+
+      <div class="step">
+        <span class="step-number">2</span>
+        在彈出選單中，選擇 <span class="highlight">「網站設定」</span>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        找到 <span class="highlight">「動作與方向」</span> 選項
+      </div>
+
+      <div class="step">
+        <span class="step-number">4</span>
+        將開關切換至 <span class="highlight">「允許」</span>
+      </div>
+
+      <div class="step">
+        <span class="step-number">5</span>
+        重新整理頁面，再次點擊「啟用感測器」按鈕
+      </div>
+
+      <div class="success">
+        ✅ 完成！現在應該可以使用動作感測器了
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="emoji">⚙️</span> 替代方法（系統設定）</h2>
+      
+      <div class="warning">
+        ⚠️ 注意：iOS 14.5+ 之後，系統設定中的「動作與方向」選項已移除，<br>
+        請使用上方的「快速方法」
+      </div>
+
+      <div class="ios-version">
+        <strong>iOS 13 - 14.4 版本：</strong><br>
+        設定 → Safari → 動作與方向存取 → 允許
+      </div>
+
+      <div class="ios-version">
+        <strong>iOS 14.5+ 版本：</strong><br>
+        必須在 Safari 瀏覽器內，透過網址列的 <code>aA</code> 按鈕設定
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="emoji">🔍</span> 常見問題</h2>
+      
+      <details style="margin: 15px 0; cursor: pointer;">
+        <summary style="font-weight: bold; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          ❓ 找不到 aA 按鈕？
+        </summary>
+        <div style="padding: 15px; background: rgba(0,0,0,0.1); margin-top: 10px; border-radius: 8px;">
+          <p>aA 按鈕通常位於：</p>
+          <ul style="margin-left: 20px; margin-top: 10px;">
+            <li>Safari 網址列的<strong>左側</strong></li>
+            <li>重新整理按鈕的旁邊</li>
+            <li>如果看不到，試著滑動網址列</li>
+          </ul>
+        </div>
+      </details>
+
+      <details style="margin: 15px 0; cursor: pointer;">
+        <summary style="font-weight: bold; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          ❓ 設定後還是不能用？
+        </summary>
+        <div style="padding: 15px; background: rgba(0,0,0,0.1); margin-top: 10px; border-radius: 8px;">
+          <p>請嘗試：</p>
+          <ol style="margin-left: 20px; margin-top: 10px;">
+            <li>完全關閉 Safari（從多工切換器關閉）</li>
+            <li>重新開啟 Safari</li>
+            <li>重新載入頁面</li>
+            <li>再次設定權限</li>
+          </ol>
+        </div>
+      </details>
+
+      <details style="margin: 15px 0; cursor: pointer;">
+        <summary style="font-weight: bold; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          ❓ 使用無痕模式可以嗎？
+        </summary>
+        <div style="padding: 15px; background: rgba(0,0,0,0.1); margin-top: 10px; border-radius: 8px;">
+          <p>⚠️ 不建議使用無痕模式</p>
+          <p style="margin-top: 10px;">無痕模式可能會阻擋某些權限請求，建議使用一般模式瀏覽。</p>
+        </div>
+      </details>
+
+      <details style="margin: 15px 0; cursor: pointer;">
+        <summary style="font-weight: bold; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          ❓ Android 手機怎麼設定？
+        </summary>
+        <div style="padding: 15px; background: rgba(0,0,0,0.1); margin-top: 10px; border-radius: 8px;">
+          <p><strong>Chrome 瀏覽器：</strong></p>
+          <ol style="margin-left: 20px; margin-top: 10px;">
+            <li>點擊網址列左側的「鎖頭」圖示</li>
+            <li>找到「權限」或「網站設定」</li>
+            <li>允許「動作感測器」</li>
+          </ol>
+          <p style="margin-top: 15px;"><strong>或到系統設定：</strong></p>
+          <p style="margin-top: 5px;">設定 → 應用程式 → Chrome → 權限 → 感應器</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h2><span class="emoji">🎯</span> 測試工具</h2>
+      <p style="margin-bottom: 15px;">使用以下工具測試您的權限設定是否正確：</p>
+      
+      <div class="button-group">
+        <a href="motion-test.html" class="button">
+          🔍 開啟診斷工具
+        </a>
+        <a href="mobile-fish-scoop.html" class="button secondary">
+          🎣 返回撈魚遊戲
+        </a>
+      </div>
+    </div>
+
+    <div class="section" style="background: rgba(0,0,0,0.3); text-align: center; font-size: 12px; opacity: 0.8;">
+      <p>💡 提示：此設定只需要做一次</p>
+      <p style="margin-top: 5px;">下次造訪時，Safari 會記住您的選擇</p>
+    </div>
+  </div>
+</body>
+</html>

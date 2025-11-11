@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎣 撈魚遊戲 - 選擇控制器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 36px;
+      text-align: center;
+      margin-bottom: 10px;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 16px;
+      opacity: 0.9;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+
+    .card h2 {
+      font-size: 24px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card .badge {
+      display: inline-block;
+      background: #4caf50;
+      color: white;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+
+    .card .badge.new {
+      background: #2196f3;
+    }
+
+    .card p {
+      line-height: 1.8;
+      opacity: 0.9;
+      margin-bottom: 15px;
+    }
+
+    .features {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+
+    .features ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .features li {
+      padding: 8px 0;
+      padding-left: 25px;
+      position: relative;
+    }
+
+    .features li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #4caf50;
+      font-weight: bold;
+    }
+
+    .features li.con:before {
+      content: '✗';
+      color: #f44336;
+    }
+
+    .button {
+      display: block;
+      width: 100%;
+      padding: 15px 30px;
+      background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+      border: none;
+      border-radius: 50px;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.2s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .button:active {
+      transform: scale(0.95);
+    }
+
+    .button.secondary {
+      background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+    }
+
+    .info-box {
+      background: rgba(255, 152, 0, 0.2);
+      border-left: 4px solid #ff9800;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 30px;
+      font-size: 14px;
+    }
+
+    .icon {
+      font-size: 48px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎣 撈魚遊戲</h1>
+    <div class="subtitle">選擇您的控制器版本</div>
+
+    <!-- 簡易版 -->
+    <div class="card">
+      <div class="icon">👆</div>
+      <h2>
+        簡易版控制器
+        <span class="badge">推薦</span>
+      </h2>
+      <p>
+        <strong>純按鈕控制，無需任何權限</strong><br>
+        適用於所有裝置和瀏覽器，包括 iOS 16+
+      </p>
+      
+      <div class="features">
+        <strong>✨ 特色：</strong>
+        <ul>
+          <li>靠近螢幕自動啟用</li>
+          <li>點擊按鈕即可撈魚</li>
+          <li>即時距離顯示</li>
+          <li>統計資訊和成功率</li>
+          <li>無需動作感測器權限</li>
+          <li>適合所有 iOS/Android 版本</li>
+        </ul>
+      </div>
+
+      <a href="mobile-fish-simple.html" class="button">
+        🚀 使用簡易版
+      </a>
+    </div>
+
+    <!-- 完整版 -->
+    <div class="card">
+      <div class="icon">📱</div>
+      <h2>
+        完整版控制器
+        <span class="badge new">NEW</span>
+      </h2>
+      <p>
+        <strong>雙模式控制：按鈕 + 動作感測器</strong><br>
+        支援揮動手機撈魚，更有臨場感
+      </p>
+      
+      <div class="features">
+        <strong>✨ 特色：</strong>
+        <ul>
+          <li>按鈕模式（無需權限）</li>
+          <li>動作模式（揮動手機）</li>
+          <li>自由切換控制方式</li>
+          <li>即時加速度顯示</li>
+          <li>智慧降級機制</li>
+        </ul>
+        
+        <strong style="color: #ff9800;">⚠️ 注意：</strong>
+        <ul>
+          <li class="con">iOS 16+ 動作感測器受限</li>
+          <li class="con">需要瀏覽器權限</li>
+        </ul>
+      </div>
+
+      <a href="mobile-fish-scoop.html" class="button secondary">
+        🎮 使用完整版
+      </a>
+    </div>
+
+    <div class="info-box">
+      <strong>💡 建議：</strong><br>
+      • <strong>iOS 16+ 用戶</strong>：建議使用「簡易版」<br>
+      • <strong>Android 用戶</strong>：兩個版本都可以<br>
+      • <strong>快速開始</strong>：直接使用「簡易版」<br>
+      • <strong>體驗動作感測</strong>：試試「完整版」
+    </div>
+
+    <div style="text-align: center; margin-top: 30px; opacity: 0.7; font-size: 14px;">
+      <p>🖥️ 大螢幕請訪問: <strong>/fish.html</strong></p>
+      <p style="margin-top: 10px;">📱 手機請掃描大螢幕的 QR Code</p>
+    </div>
+  </div>
+</body>
+</html>

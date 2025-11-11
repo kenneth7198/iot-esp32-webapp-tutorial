@@ -75,13 +75,42 @@ httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🌐 HTTP 靜態檔案伺服器已啟動');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📱 手機訪問: http://192.168.100.200:${HTTP_PORT}/esp32-led-control.html`);
-  console.log(`💻 本機訪問: http://localhost:${HTTP_PORT}/esp32-led-control.html`);
+  console.log(`\n📱 訪問網址: http://192.168.100.200:${HTTP_PORT}`);
   if (addresses.length > 0) {
     addresses.forEach(addr => {
-      console.log(`🔗 網路訪問: http://${addr}:${HTTP_PORT}/esp32-led-control.html`);
+      console.log(`🔗 本機網址: http://${addr}:${HTTP_PORT}`);
     });
   }
+  console.log(`💻 本機訪問: http://localhost:${HTTP_PORT}`);
+  
+  console.log('\n🎮 可用的互動專案：');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('1️⃣  LED 控制');
+  console.log('    📄 /esp32-led-control.html');
+  console.log('    🎛️  遠端控制 ESP32 LED 開關\n');
+  
+  console.log('2️⃣  多人互動音樂節拍遊戲');
+  console.log('    📄 /processing-control.html');
+  console.log('    🎵 多人手機搖晃產生音樂節拍\n');
+  
+  console.log('3️⃣  Ghost Maze 鬼魂迷宮');
+  console.log('    📄 /ghost-maze.html');
+  console.log('    👻 手機控制鬼魂移動收集寶物\n');
+  
+  console.log('4️⃣  Generative Art 生成藝術');
+  console.log('    📄 /art.html');
+  console.log('    🎨 觸控感測器控制藝術生成\n');
+  
+  console.log('5️⃣  Audiovisual Multiplayer 視聽多人遊戲');
+  console.log('    📄 /audiovisual-multiplayer.html');
+  console.log('    🎹 多人協作音樂視覺化\n');
+  
+  console.log('6️⃣  Fish 撈魚遊戲');
+  console.log('    📄 /fish.html');
+  console.log('    🐟 超音波感測器撈魚互動遊戲');
+  console.log('    📱 /mobile-fish-simple.html (簡易版控制器 - 推薦)');
+  console.log('    📱 /mobile-fish-scoop.html (完整版控制器)');
+  
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 });
 
@@ -134,6 +163,13 @@ mqttClient.on('connect', () => {
   mqttClient.subscribe('esp32/+/touch', (err) => {
     if (!err) {
       console.log('[MQTT] 已訂閱主題: esp32/+/touch');
+    }
+  });
+  
+  // 訂閱距離感測器數據（用於撈魚遊戲）
+  mqttClient.subscribe('esp32/+/distance', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/+/distance');
     }
   });
 });
@@ -308,6 +344,8 @@ mqttClient.on('message', (topic, payload) => {
     console.log(`[MQTT] 💎 ${topic}: ${payloadStr}`);
   } else if (topic.includes('art/button')) {
     console.log(`[MQTT] 🎨 ${topic}: ${payloadStr}`);
+  } else if (topic.includes('/distance')) {
+    console.log(`[MQTT] 📏 ${topic}: ${payloadStr}`);
   } else {
     console.log(`[MQTT] 收到訊息 ${topic}:`, payloadStr);
   }
