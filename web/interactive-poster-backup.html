@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>互動海報 - 孟克《吶喊》</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #000;
+      color: white;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 靜態圖片 */
+    #static-image {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      opacity: 1;
+      transition: all 0.3s ease;
+      z-index: 2;
+      filter: none;
+    }
+
+    #static-image.wave-effect {
+      animation: waveDistortion 2s ease-in-out infinite;
+      filter: hue-rotate(0deg) brightness(1.1) contrast(1.1);
+    }
+
+    @keyframes waveDistortion {
+      0% { 
+        filter: hue-rotate(0deg) brightness(1.1) contrast(1.1);
+        transform: translateX(0) scale(1);
+      }
+      25% { 
+        filter: hue-rotate(10deg) brightness(1.15) contrast(1.15);
+        transform: translateX(-5px) scale(1.02);
+      }
+      50% { 
+        filter: hue-rotate(20deg) brightness(1.2) contrast(1.2);
+        transform: translateX(0) scale(1.05);
+      }
+      75% { 
+        filter: hue-rotate(10deg) brightness(1.15) contrast(1.15);
+        transform: translateX(5px) scale(1.02);
+      }
+      100% { 
+        filter: hue-rotate(0deg) brightness(1.1) contrast(1.1);
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    /* 動態影片 */
+    #dynamic-video {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      opacity: 0;
+      transition: opacity 1s ease;
+      z-index: 1;
+      display: none; /* 改為不使用影片 */
+    }
+
+    #dynamic-video.visible {
+      opacity: 1;
+    }
+
+    /* 波浪漣漪覆蓋層 */
+    #wave-overlay {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    #wave-overlay.active {
+      opacity: 1;
+    }
+
+    /* Canvas 波浪效果 */
+    #effect-canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 4;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      mix-blend-mode: overlay;
+    }
+
+    #effect-canvas.active {
+      opacity: 0.6;
+    }
+
+    /* 狀態指示器 */
+    #status-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 20px;
+      z-index: 100;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      min-width: 250px;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .status-label {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .status-value {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .indicator-green {
+      background: #4caf50;
+      box-shadow: 0 0 10px #4caf50;
+    }
+
+    .indicator-red {
+      background: #f44336;
+      box-shadow: 0 0 10px #f44336;
+    }
+
+    .indicator-yellow {
+      background: #ffc107;
+      box-shadow: 0 0 10px #ffc107;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    /* 提示訊息 */
+    #hint {
+      position: fixed;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 20px 40px;
+      border-radius: 50px;
+      font-size: 20px;
+      text-align: center;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      animation: float 3s ease-in-out infinite;
+      z-index: 50;
+      transition: opacity 0.5s;
+    }
+
+    #hint.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-10px); }
+    }
+
+    /* 距離提示 */
+    #distance-hint {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 59, 48, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 30px 50px;
+      border-radius: 20px;
+      font-size: 32px;
+      font-weight: bold;
+      text-align: center;
+      border: 3px solid #ff3b30;
+      z-index: 150;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    #distance-hint.show {
+      opacity: 1;
+    }
+
+    /* 特效覆蓋層 */
+    #effect-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 90;
+    }
+
+    /* 標題 */
+    #title {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.8);
+      z-index: 100;
+    }
+
+    /* 調試模式開關 */
+    #debug-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      z-index: 100;
+      font-size: 12px;
+    }
+
+    #debug-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 測試控制面板 */
+    #test-controls {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 20px;
+      z-index: 100;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      display: flex;
+      gap: 10px;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #test-controls h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      color: #ffc107;
+    }
+
+    .test-button-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .test-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .test-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .test-button:active {
+      transform: translateY(0);
+    }
+
+    .test-button.trigger {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .test-button.reset {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .test-button.near {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+
+    .test-button.far {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .test-info {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 5px;
+      text-align: center;
+    }
+
+    /* 波紋效果 */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+      pointer-events: none;
+      animation: ripple-animation 2s ease-out;
+    }
+
+    @keyframes ripple-animation {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    /* 波浪漣漪圓環 */
+    .wave-ring {
+      position: absolute;
+      border: 3px solid rgba(255, 200, 100, 0.6);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: wave-ring-animation 3s ease-out infinite;
+    }
+
+    @keyframes wave-ring-animation {
+      0% {
+        width: 50px;
+        height: 50px;
+        opacity: 1;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+      100% {
+        width: 800px;
+        height: 800px;
+        opacity: 0;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+    }
+
+    /* QR Code 區域 */
+    #qr-code-container {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 15px;
+      text-align: center;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    #qr-code-container h4 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #333;
+    }
+
+    #qr-code-container p {
+      margin: 5px 0 0 0;
+      font-size: 12px;
+      color: #666;
+    }
+
+    #qr-code {
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- 靜態圖片 (孟克《吶喊》) -->
+    <img id="static-image" 
+         src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg"
+         alt="孟克《吶喊》">
+
+    <!-- Canvas 用於波浪效果 -->
+    <canvas id="effect-canvas"></canvas>
+
+    <!-- 波浪漣漪覆蓋層 -->
+    <div id="wave-overlay"></div>
+
+    <!-- 動態影片（已停用） -->
+    <video id="dynamic-video" loop muted playsinline style="display: none;">
+      <source src="scream-animated.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- 標題 -->
+  <div id="title">🎨 互動海報：吶喊</div>
+
+  <!-- 測試控制面板 -->
+  <div id="test-controls">
+    <h3>🧪 測試控制台</h3>
+    <div class="test-button-row">
+      <button class="test-button trigger" onclick="testTrigger()">
+        ⚡ 觸發互動
+      </button>
+      <button class="test-button reset" onclick="testReset()">
+        🔄 重置狀態
+      </button>
+    </div>
+    <div class="test-button-row">
+      <button class="test-button near" onclick="testNearDistance()">
+        👉 模擬靠近 (5cm)
+      </button>
+      <button class="test-button far" onclick="testFarDistance()">
+        👈 模擬遠離 (100cm)
+      </button>
+    </div>
+    <div class="test-info">
+      💡 測試按鈕可以在沒有感測器時模擬互動效果
+    </div>
+  </div>
+
+  <!-- 狀態面板 -->
+  <div id="status-panel">
+    <div class="status-row">
+      <span class="status-label">連線狀態</span>
+      <span class="status-value" id="ws-status">
+        連接中...
+        <span class="status-indicator indicator-yellow"></span>
+      </span>
+    </div>
+
+    <div class="status-row">
+      <span class="status-label">距離感測</span>
+      <span class="status-value" id="distance-status">
+        -- cm
+        <span class="status-indicator indicator-red"></span>
+      </span>
+    </div>
+
+    <div class="status-row">
+      <span class="status-label">互動狀態</span>
+      <span class="status-value" id="interaction-status">
+        靜態
+        <span class="status-indicator indicator-yellow"></span>
+      </span>
+    </div>
+
+    <div class="status-row">
+      <span class="status-label">觸發次數</span>
+      <span class="status-value" id="trigger-count">0</span>
+    </div>
+  </div>
+
+  <!-- 提示訊息 -->
+  <div id="hint">
+    👋 靠近海報 (< 10cm) 觀看波浪漣漪效果
+  </div>
+
+  <!-- 距離警告 -->
+  <div id="distance-hint">
+    🚶 請靠近海報！
+  </div>
+
+  <!-- 特效覆蓋層 -->
+  <div id="effect-overlay"></div>
+
+  <!-- 調試開關 -->
+  <button id="debug-toggle" onclick="toggleDebug()">
+    🔧 調試模式
+  </button>
+
+  <!-- QR Code 區域 -->
+  <div id="qr-code-container">
+    <h4>📱 手機拍攝</h4>
+    <div id="qr-code"></div>
+    <p>掃描開啟手機端</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    // ==================== 設定 ====================
+    const WS_URL = 'ws://192.168.100.200:8080';
+    const TRIGGER_DISTANCE = 10; // 觸發距離 (cm)
+    const SAFE_DISTANCE = 50;    // 安全距離 (cm)
+    const DEBOUNCE_TIME = 500;   // 防抖時間 (ms)
+    const ARTWORK_INTERVAL = 15000; // 15秒換一張畫
+
+    // ==================== 世界名畫資料 ====================
+    const artworks = [
+      {
+        id: 1,
+        title: '吶喊',
+        artist: '孟克 (Edvard Munch)',
+        year: '1893',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg',
+        description: '表現主義代表作，描繪人類內心的焦慮與恐懼',
+        colors: ['#FF6B35', '#FF8C42', '#C73E1D'], // 橘紅色系
+        effectType: 'wave' // 波浪扭曲
+      },
+      {
+        id: 2,
+        title: '星夜',
+        artist: '梵谷 (Vincent van Gogh)',
+        year: '1889',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/800px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
+        description: '後印象派傑作，旋轉的星空展現內心的激情',
+        colors: ['#1E3A8A', '#3B82F6', '#FBBF24'], // 藍色與金黃
+        effectType: 'spiral' // 螺旋旋轉
+      },
+      {
+        id: 3,
+        title: '蒙娜麗莎',
+        artist: '達文西 (Leonardo da Vinci)',
+        year: '1503',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
+        description: '文藝復興代表作，神秘的微笑流傳千古',
+        colors: ['#8B7355', '#D4AF37', '#4A5568'], // 大地色系
+        effectType: 'glow' // 光暈閃爍
+      },
+      {
+        id: 4,
+        title: '戴珍珠耳環的少女',
+        artist: '維梅爾 (Johannes Vermeer)',
+        year: '1665',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg',
+        description: '荷蘭黃金時代傑作，少女回眸的瞬間',
+        colors: ['#1E40AF', '#FBBF24', '#374151'], // 藍與金
+        effectType: 'shimmer' // 珍珠閃爍
+      },
+      {
+        id: 5,
+        title: '記憶的永恆',
+        artist: '達利 (Salvador Dalí)',
+        year: '1931',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/dd/The_Persistence_of_Memory.jpg/800px-The_Persistence_of_Memory.jpg',
+        description: '超現實主義代表作，融化的時鐘象徵時間流逝',
+        colors: ['#D4A373', '#E8C5A5', '#1E3A8A'], // 沙漠色調
+        effectType: 'melt' // 融化效果
+      },
+      {
+        id: 6,
+        title: '維納斯的誕生',
+        artist: '波提切利 (Sandro Botticelli)',
+        year: '1485',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/800px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg',
+        description: '文藝復興早期傑作，愛與美的女神誕生',
+        colors: ['#FFC0CB', '#87CEEB', '#FFD700'], // 粉藍金
+        effectType: 'float' // 漂浮效果
+      },
+      {
+        id: 7,
+        title: '日出·印象',
+        artist: '莫內 (Claude Monet)',
+        year: '1872',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Claude_Monet%2C_Impression%2C_soleil_levant.jpg/800px-Claude_Monet%2C_Impression%2C_soleil_levant.jpg',
+        description: '印象派命名之作，捕捉日出時的光影變化',
+        colors: ['#FF6B35', '#4A90E2', '#B8C5D6'], // 日出色調
+        effectType: 'ripple' // 水波漣漪
+      },
+      {
+        id: 8,
+        title: '吻',
+        artist: '克林姆 (Gustav Klimt)',
+        year: '1908',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Gustav_Klimt_016.jpg/800px-Gustav_Klimt_016.jpg',
+        description: '維也納分離派代表作，金色裝飾與愛的交融',
+        colors: ['#D4AF37', '#8B4513', '#FF6B9D'], // 金色系
+        effectType: 'sparkle' // 金粉閃爍
+      },
+      {
+        id: 9,
+        title: '創造亞當',
+        artist: '米開朗基羅 (Michelangelo)',
+        year: '1512',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/800px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg',
+        description: '西斯廷教堂天頂畫，上帝與亞當指尖的觸碰',
+        colors: ['#E8D4B0', '#8B7355', '#B8860B'], // 古典色調
+        effectType: 'divine' // 神聖光芒
+      },
+      {
+        id: 10,
+        title: '大碗島的星期天下午',
+        artist: '秀拉 (Georges Seurat)',
+        year: '1886',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg/800px-A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg',
+        description: '點彩派代表作，用色點構成悠閒的午後時光',
+        colors: ['#90EE90', '#87CEEB', '#FFD700'], // 清新色調
+        effectType: 'pointillism' // 點彩效果
+      }
+    ];
+
+    // ==================== 狀態變數 ====================
+    let ws;
+    let wsConnected = false;
+    let currentDistance = 999;
+    let isActive = false;         // 是否處於激活狀態
+    let triggerCount = 0;         // 觸發次數
+    let lastTriggerTime = 0;      // 上次觸發時間
+    let debugMode = false;        // 調試模式
+    let currentArtworkIndex = 0;  // 當前畫作索引
+    let artworkTimer = null;      // 畫作輪播計時器
+
+    // DOM 元素
+    const staticImage = document.getElementById('static-image');
+    const dynamicVideo = document.getElementById('dynamic-video');
+    const effectCanvas = document.getElementById('effect-canvas');
+    const waveOverlay = document.getElementById('wave-overlay');
+    const hint = document.getElementById('hint');
+    const distanceHint = document.getElementById('distance-hint');
+    const titleElement = document.getElementById('title');
+
+    // Canvas 設定
+    let ctx;
+    let canvasWidth, canvasHeight;
+
+    // ==================== 初始化 ====================
+    window.addEventListener('load', () => {
+      console.log('🎨 互動海報系統啟動');
+      
+      // 初始化 Canvas
+      setupCanvas();
+      
+      // 連接 WebSocket
+      connectWebSocket();
+      
+      // 視窗大小改變時重新設定 Canvas
+      window.addEventListener('resize', setupCanvas);
+      
+      // 檢查是否有影片檔案
+      checkVideoSource();
+      
+      // 生成 QR Code
+      generateQRCode();
+      
+      // 顯示第一幅畫
+      showArtwork(0);
+      
+      // 開始畫作輪播
+      startArtworkCarousel();
+    });
+
+    function generateQRCode() {
+      const mobileUrl = 'http://192.168.100.200:8081/mobile-poster-capture.html';
+      new QRCode(document.getElementById('qr-code'), {
+        text: mobileUrl,
+        width: 120,
+        height: 120,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      console.log('📱 QR Code 已生成:', mobileUrl);
+    }
+
+    // ==================== 畫作輪播系統 ====================
+    function startArtworkCarousel() {
+      artworkTimer = setInterval(() => {
+        if (!isActive) { // 只在靜態時才切換
+          currentArtworkIndex = (currentArtworkIndex + 1) % artworks.length;
+          showArtwork(currentArtworkIndex);
+        }
+      }, ARTWORK_INTERVAL);
+      console.log('🎨 畫作輪播已啟動 (每 15 秒切換)');
+    }
+
+    function showArtwork(index) {
+      const artwork = artworks[index];
+      console.log(`🖼️ 顯示畫作 ${index + 1}/${artworks.length}: ${artwork.title}`);
+      
+      // 更新圖片
+      staticImage.src = artwork.imageUrl;
+      staticImage.alt = `${artwork.title} - ${artwork.artist}`;
+      
+      // 更新標題
+      titleElement.innerHTML = `
+        🎨 ${artwork.title}<br>
+        <span style="font-size: 16px; opacity: 0.8;">${artwork.artist} (${artwork.year})</span>
+      `;
+      
+      // 儲存當前畫作到全域變數（供手機端撈取使用）
+      window.currentArtwork = artwork;
+      
+      // 發送畫作更新訊息
+      sendArtworkUpdate(artwork);
+    }
+
+    function sendArtworkUpdate(artwork) {
+      if (wsConnected && ws.readyState === WebSocket.OPEN) {
+        const artworkData = {
+          type: 'publish',
+          topic: 'poster/artwork',
+          payload: JSON.stringify({
+            id: artwork.id,
+            title: artwork.title,
+            artist: artwork.artist,
+            year: artwork.year,
+            imageUrl: artwork.imageUrl,
+            timestamp: Date.now()
+          })
+        };
+        ws.send(JSON.stringify(artworkData));
+      }
+    }
+
+    function setupCanvas() {
+      canvasWidth = window.innerWidth;
+      canvasHeight = window.innerHeight;
+      effectCanvas.width = canvasWidth;
+      effectCanvas.height = canvasHeight;
+      ctx = effectCanvas.getContext('2d');
+    }
+
+    function checkVideoSource() {
+      // 檢查影片是否存在，如果不存在則使用 Canvas 動畫
+      dynamicVideo.addEventListener('error', () => {
+        console.log('⚠️ 影片檔案不存在，使用 Canvas 動畫作為替代');
+        dynamicVideo.style.display = 'none';
+      });
+    }
+
+    // ==================== WebSocket 連接 ====================
+    function connectWebSocket() {
+      console.log('🌐 連接 WebSocket...');
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket 已連接');
+        wsConnected = true;
+        updateWSStatus(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (err) {
+          console.error('解析訊息錯誤:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        updateWSStatus(false);
+      };
+
+      ws.onclose = () => {
+        console.log('⚠️ WebSocket 已斷線，5秒後重連...');
+        wsConnected = false;
+        updateWSStatus(false);
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    function handleWebSocketMessage(data) {
+      if (data.type === 'mqtt_message') {
+        const topic = data.topic;
+        const payload = data.payload;
+
+        // 處理距離感測器數據
+        if (topic.includes('/distance')) {
+          try {
+            const distanceData = JSON.parse(payload);
+            updateDistance(distanceData.distance, distanceData.valid);
+          } catch (err) {
+            console.error('解析距離數據錯誤:', err);
+          }
+        }
+      }
+    }
+
+    // ==================== 距離處理 ====================
+    function updateDistance(distance, valid) {
+      if (!valid || distance < 0) return;
+
+      currentDistance = Math.round(distance);
+      
+      // 更新狀態顯示
+      updateDistanceStatus(currentDistance);
+
+      // 判斷是否觸發互動
+      if (currentDistance < TRIGGER_DISTANCE) {
+        triggerInteraction();
+      } else if (currentDistance > SAFE_DISTANCE && isActive) {
+        deactivateInteraction();
+      }
+
+      // 顯示距離警告
+      if (currentDistance > TRIGGER_DISTANCE && currentDistance < 30) {
+        showDistanceHint();
+      } else {
+        hideDistanceHint();
+      }
+    }
+
+    // ==================== 互動控制 ====================
+    function triggerInteraction() {
+      const now = Date.now();
+      
+      // 防抖：避免頻繁觸發
+      if (now - lastTriggerTime < DEBOUNCE_TIME) {
+        return;
+      }
+      
+      if (!isActive) {
+        console.log('🎬 觸發互動！距離:', currentDistance, 'cm');
+        
+        isActive = true;
+        triggerCount++;
+        lastTriggerTime = now;
+        
+        // 更新計數
+        document.getElementById('trigger-count').textContent = triggerCount;
+        
+        // 隱藏提示
+        hint.classList.add('hidden');
+        
+        // 切換到動態狀態
+        activateDynamic();
+        
+        // 更新狀態
+        updateInteractionStatus('波浪效果', 'green');
+        
+        // 創建波紋效果
+        createRippleEffect();
+        
+        // 發送狀態到手機端
+        sendPosterStatus(true);
+      }
+    }
+
+    function deactivateInteraction() {
+      if (isActive) {
+        console.log('📴 結束互動');
+        
+        isActive = false;
+        
+        // 切換回靜態
+        deactivateDynamic();
+        
+        // 顯示提示
+        hint.classList.remove('hidden');
+        
+        // 更新狀態
+        updateInteractionStatus('靜態', 'yellow');
+        
+        // 發送狀態到手機端
+        sendPosterStatus(false);
+      }
+    }
+
+    // 發送海報狀態給手機端
+    function sendPosterStatus(active) {
+      if (wsConnected && ws.readyState === WebSocket.OPEN) {
+        const statusData = {
+          type: 'publish',
+          topic: 'poster/status',
+          payload: JSON.stringify({
+            active: active,
+            timestamp: Date.now()
+          })
+        };
+        ws.send(JSON.stringify(statusData));
+        console.log('📡 已發送海報狀態:', active ? '動態' : '靜態');
+      }
+    }
+
+    // ==================== 動態效果控制 ====================
+    function activateDynamic() {
+      // 圖片保持可見，但加上波浪扭曲效果
+      staticImage.classList.add('wave-effect');
+      
+      // 啟動波浪覆蓋層
+      waveOverlay.classList.add('active');
+      
+      // 啟動 Canvas 動畫（根據當前畫作類型）
+      effectCanvas.classList.add('active');
+      const artwork = artworks[currentArtworkIndex];
+      startDynamicEffect(artwork.effectType, artwork.colors);
+      
+      // 創建連續的波浪漣漪
+      createContinuousWaveRings();
+    }
+
+    function deactivateDynamic() {
+      // 移除波浪效果，回到靜態
+      staticImage.classList.remove('wave-effect');
+      
+      // 停用波浪覆蓋層
+      waveOverlay.classList.remove('active');
+      
+      // 停止 Canvas 動畫
+      effectCanvas.classList.remove('active');
+      stopDynamicEffect();
+      
+      // 清除波浪漣漪
+      clearWaveRings();
+    }
+
+    // ==================== Canvas 波浪動畫 ====================
+    let animationId = null;
+    let waveRingInterval = null;
+
+    function startWaveAnimation() {
+      console.log('� 啟動波浪動畫');
+      animate();
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      
+      const time = Date.now() * 0.001;
+      
+      // 繪製多層波浪
+      for (let layer = 0; layer < 5; layer++) {
+        ctx.strokeStyle = `hsla(${30 + layer * 15}, 80%, 60%, ${0.3 - layer * 0.05})`;
+        ctx.lineWidth = 3 - layer * 0.3;
+        ctx.beginPath();
+        
+        for (let x = 0; x < canvasWidth; x += 3) {
+          // 多重波浪疊加
+          const wave1 = Math.sin((x * 0.01) + time * 2 + layer) * 30;
+          const wave2 = Math.sin((x * 0.02) - time * 1.5 + layer * 0.5) * 20;
+          const wave3 = Math.sin((x * 0.005) + time + layer * 0.3) * 40;
+          
+          const y = canvasHeight / 2 + wave1 + wave2 + wave3;
+          
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+      
+      // 繪製漂浮粒子
+      ctx.fillStyle = 'rgba(255, 200, 100, 0.6)';
+      for (let i = 0; i < 20; i++) {
+        const x = (Math.sin(time * 0.5 + i) * 0.5 + 0.5) * canvasWidth;
+        const y = (Math.sin(time * 0.3 + i * 0.5) * 0.5 + 0.5) * canvasHeight;
+        const size = Math.sin(time + i) * 2 + 3;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      animationId = requestAnimationFrame(animate);
+    }
+
+    function stopWaveAnimation() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    }
+
+    // 創建連續的波浪漣漪圓環
+    function createContinuousWaveRings() {
+      waveRingInterval = setInterval(() => {
+        createWaveRing();
+      }, 800); // 每 0.8 秒產生一個漣漪
+    }
+
+    function createWaveRing() {
+      const ring = document.createElement('div');
+      ring.className = 'wave-ring';
+      waveOverlay.appendChild(ring);
+      
+      // 3 秒後移除
+      setTimeout(() => {
+        ring.remove();
+      }, 3000);
+    }
+
+    function clearWaveRings() {
+      if (waveRingInterval) {
+        clearInterval(waveRingInterval);
+        waveRingInterval = null;
+      }
+      // 清除所有現有的漣漪
+      waveOverlay.innerHTML = '';
+    }
+
+    // ==================== 視覺效果 ====================
+    function createRippleEffect() {
+      const ripple = document.createElement('div');
+      ripple.className = 'ripple';
+      ripple.style.width = '100px';
+      ripple.style.height = '100px';
+      ripple.style.left = '50%';
+      ripple.style.top = '50%';
+      ripple.style.transform = 'translate(-50%, -50%)';
+      
+      document.getElementById('effect-overlay').appendChild(ripple);
+      
+      setTimeout(() => {
+        ripple.remove();
+      }, 2000);
+    }
+
+    // ==================== UI 更新 ====================
+    function updateWSStatus(connected) {
+      const statusEl = document.getElementById('ws-status');
+      
+      if (connected) {
+        statusEl.innerHTML = `
+          已連接
+          <span class="status-indicator indicator-green"></span>
+        `;
+      } else {
+        statusEl.innerHTML = `
+          未連接
+          <span class="status-indicator indicator-red"></span>
+        `;
+      }
+    }
+
+    function updateDistanceStatus(distance) {
+      const statusEl = document.getElementById('distance-status');
+      const isNear = distance < TRIGGER_DISTANCE;
+      
+      statusEl.innerHTML = `
+        ${distance} cm
+        <span class="status-indicator ${isNear ? 'indicator-green' : 'indicator-red'}"></span>
+      `;
+    }
+
+    function updateInteractionStatus(text, color) {
+      const statusEl = document.getElementById('interaction-status');
+      const colorClass = color === 'green' ? 'indicator-green' : 
+                        color === 'red' ? 'indicator-red' : 'indicator-yellow';
+      
+      statusEl.innerHTML = `
+        ${text}
+        <span class="status-indicator ${colorClass}"></span>
+      `;
+    }
+
+    function showDistanceHint() {
+      distanceHint.classList.add('show');
+    }
+
+    function hideDistanceHint() {
+      distanceHint.classList.remove('show');
+    }
+
+    // ==================== 調試功能 ====================
+    function toggleDebug() {
+      debugMode = !debugMode;
+      
+      if (debugMode) {
+        console.log('🔧 調試模式：開啟');
+        document.getElementById('debug-toggle').textContent = '🔧 調試模式：開';
+        document.getElementById('status-panel').style.background = 'rgba(0, 255, 0, 0.2)';
+        
+        // 顯示更多資訊
+        setInterval(() => {
+          if (debugMode) {
+            console.log('距離:', currentDistance, 'cm | 狀態:', isActive ? '動態' : '靜態');
+          }
+        }, 1000);
+      } else {
+        console.log('🔧 調試模式：關閉');
+        document.getElementById('debug-toggle').textContent = '🔧 調試模式';
+        document.getElementById('status-panel').style.background = 'rgba(0, 0, 0, 0.8)';
+      }
+    }
+
+    // 鍵盤快捷鍵測試
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 't' || e.key === 'T') {
+        // 手動觸發測試
+        console.log('🧪 手動觸發測試');
+        currentDistance = 5;
+        updateDistance(5, true);
+      } else if (e.key === 'r' || e.key === 'R') {
+        // 重置
+        console.log('🔄 重置狀態');
+        currentDistance = 999;
+        deactivateInteraction();
+        updateDistance(999, true);
+      }
+    });
+
+    // ==================== 測試按鈕函數 ====================
+    function testTrigger() {
+      console.log('🧪 測試：觸發互動');
+      currentDistance = 5;
+      updateDistance(5, true);
+      triggerInteraction();
+      
+      // 視覺反饋
+      createRippleEffect();
+      
+      // 提示
+      alert('✅ 已觸發互動效果！\n距離已設定為 5cm');
+    }
+
+    function testReset() {
+      console.log('🔄 測試：重置狀態');
+      currentDistance = 999;
+      deactivateInteraction();
+      updateDistance(999, true);
+      
+      // 提示
+      alert('✅ 已重置為靜態狀態！\n距離已設定為 999cm');
+    }
+
+    function testNearDistance() {
+      console.log('👉 測試：模擬靠近 (5cm)');
+      currentDistance = 5;
+      updateDistance(5, true);
+      
+      // 如果距離夠近，自動觸發
+      if (currentDistance < TRIGGER_DISTANCE) {
+        triggerInteraction();
+      }
+      
+      // 提示
+      const hint = document.createElement('div');
+      hint.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(67, 233, 123, 0.9);
+        padding: 20px 40px;
+        border-radius: 15px;
+        font-size: 24px;
+        font-weight: bold;
+        z-index: 200;
+        animation: fadeOut 2s forwards;
+      `;
+      hint.textContent = '✅ 模擬靠近 5cm';
+      document.body.appendChild(hint);
+      
+      setTimeout(() => hint.remove(), 2000);
+    }
+
+    function testFarDistance() {
+      console.log('👈 測試：模擬遠離 (100cm)');
+      currentDistance = 100;
+      updateDistance(100, true);
+      
+      // 如果太遠，自動停用
+      if (isActive && currentDistance > SAFE_DISTANCE) {
+        deactivateInteraction();
+      }
+      
+      // 提示
+      const hint = document.createElement('div');
+      hint.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(250, 112, 154, 0.9);
+        padding: 20px 40px;
+        border-radius: 15px;
+        font-size: 24px;
+        font-weight: bold;
+        z-index: 200;
+        animation: fadeOut 2s forwards;
+      `;
+      hint.textContent = '✅ 模擬遠離 100cm';
+      document.body.appendChild(hint);
+      
+      setTimeout(() => hint.remove(), 2000);
+    }
+
+    // 添加 CSS 動畫
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeOut {
+        0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        70% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

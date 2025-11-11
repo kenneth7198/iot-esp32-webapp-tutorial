@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🎣 撈魚控制器 (進階版)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    #container {
+      flex: 1;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 5px;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    #status-panel {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .indicator-green { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
+    .indicator-red { background: #f44336; box-shadow: 0 0 10px #f44336; }
+    .indicator-yellow { background: #ffc107; box-shadow: 0 0 10px #ffc107; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    /* 方向控制區 */
+    .control-section {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+      opacity: 0.9;
+    }
+
+    .direction-pad {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 8px;
+      max-width: 250px;
+      margin: 0 auto;
+      aspect-ratio: 1;
+    }
+
+    .dir-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1;
+      touch-action: manipulation;
+    }
+
+    .dir-btn:active {
+      background: rgba(76, 175, 80, 0.5);
+      transform: scale(0.95);
+      border-color: #4caf50;
+    }
+
+    .dir-btn.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .dir-btn:nth-child(5) {
+      background: rgba(0, 0, 0, 0.3);
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* 連擊撈魚區 */
+    .scoop-section {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #combo-display {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .combo-count {
+      font-size: 48px;
+      font-weight: bold;
+      color: #ffd700;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      animation: comboPulse 0.3s;
+    }
+
+    @keyframes comboPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    .combo-progress {
+      background: rgba(0, 0, 0, 0.3);
+      height: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .combo-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+      transition: width 0.2s;
+      position: relative;
+    }
+
+    .combo-bar.complete {
+      background: linear-gradient(90deg, #ffd700 0%, #ffa500 100%);
+      animation: barGlow 0.5s infinite;
+    }
+
+    @keyframes barGlow {
+      0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+      50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+    }
+
+    #scoop-button {
+      width: 100%;
+      height: 100px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      font-size: 32px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.1s;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      touch-action: manipulation;
+    }
+
+    #scoop-button:active {
+      transform: scale(0.97);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    #scoop-button.ready {
+      background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+      animation: readyGlow 1.5s infinite;
+    }
+
+    #scoop-button.disabled {
+      background: linear-gradient(135deg, #999 0%, #666 100%);
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #scoop-button.combo-active {
+      background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+      animation: comboGlow 0.3s;
+    }
+
+    @keyframes readyGlow {
+      0%, 100% { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(76, 175, 80, 0.7); }
+      50% { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 0 15px rgba(76, 175, 80, 0); }
+    }
+
+    @keyframes comboGlow {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(0.95); }
+    }
+
+    /* 統計區 */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .stat-item {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffd700;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 3px;
+    }
+
+    #feedback-message {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(76, 175, 80, 0.95);
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 1000;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes slideDown {
+      from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+      to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 12px;
+      opacity: 0.7;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="feedback-message"></div>
+
+  <div id="container">
+    <h1>🎣 撈魚控制器</h1>
+    <div class="subtitle">方向控制 + 連擊撈魚</div>
+
+    <!-- 狀態面板 -->
+    <div id="status-panel">
+      <div class="status-row">
+        <span>連線</span>
+        <span id="ws-status">
+          連接中...
+          <span class="status-indicator indicator-yellow"></span>
+        </span>
+      </div>
+      <div class="status-row">
+        <span>距離</span>
+        <span id="distance-status">
+          -- cm
+          <span class="status-indicator indicator-red"></span>
+        </span>
+      </div>
+      <div class="status-row">
+        <span>魚在範圍</span>
+        <span id="fish-status">
+          否
+          <span class="status-indicator indicator-red"></span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 方向控制 -->
+    <div class="control-section">
+      <div class="section-title">🎯 移動釣餌</div>
+      <div class="direction-pad">
+        <div></div>
+        <button class="dir-btn" id="btn-up" data-dir="up">↑</button>
+        <div></div>
+        <button class="dir-btn" id="btn-left" data-dir="left">←</button>
+        <div class="dir-btn"></div>
+        <button class="dir-btn" id="btn-right" data-dir="right">→</button>
+        <div></div>
+        <button class="dir-btn" id="btn-down" data-dir="down">↓</button>
+        <div></div>
+      </div>
+      <div class="hint">點擊方向鍵移動釣餌位置</div>
+    </div>
+
+    <!-- 連擊撈魚 -->
+    <div class="scoop-section">
+      <div class="section-title">💥 連擊撈魚</div>
+      
+      <div id="combo-display">
+        <div class="combo-count" id="combo-count">0</div>
+        <div style="font-size: 12px; opacity: 0.8;">連擊次數</div>
+      </div>
+
+      <div class="combo-progress">
+        <div class="combo-bar" id="combo-bar" style="width: 0%"></div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; margin-bottom: 10px;" id="combo-hint">
+        需要 <span id="required-combo">5</span> 次連擊撈魚
+      </div>
+
+      <button id="scoop-button" class="disabled">
+        🎣 點擊撈魚
+      </button>
+
+      <div class="hint">
+        靠近螢幕（<10cm）且魚在範圍內時<br>
+        快速連續點擊按鈕撈魚！
+      </div>
+    </div>
+
+    <!-- 統計 -->
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-value" id="score">0</div>
+        <div class="stat-label">總分數</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="total-catch">0</div>
+        <div class="stat-label">撈到魚</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="max-combo">0</div>
+        <div class="stat-label">最高連擊</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="success-rate">0%</div>
+        <div class="stat-label">成功率</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 設定 ====================
+    const WS_URL = 'ws://192.168.100.200:8080';
+    const PLAYER_ID = 'player-' + Math.random().toString(36).substr(2, 9);
+
+    // MQTT 主題
+    const TOPIC_MOVE = 'esp32/fish/move';
+    const TOPIC_SCOOP = 'esp32/fish/scoop';
+    const TOPIC_JOIN = 'esp32/fish/join';
+    const TOPIC_COMBO = 'esp32/fish/combo';
+
+    // ==================== 狀態變數 ====================
+    let ws;
+    let wsConnected = false;
+    let currentDistance = 999;
+    let distanceNear = false;
+    let fishInRange = false;
+
+    // 連擊系統
+    let comboCount = 0;
+    let requiredCombo = 5; // 需要的連擊次數
+    let comboTimeout = null;
+    let comboResetTime = 1500; // 連擊重置時間 (ms)
+    let lastComboTime = 0;
+
+    // 統計
+    let score = 0;
+    let totalCatch = 0;
+    let maxCombo = 0;
+    let totalAttempts = 0;
+
+    // ==================== 初始化 ====================
+    window.addEventListener('load', () => {
+      console.log('🎣 撈魚控制器啟動（進階版）');
+      console.log('玩家 ID:', PLAYER_ID);
+      
+      // 連接 WebSocket
+      connectWebSocket();
+
+      // 方向按鈕事件
+      document.querySelectorAll('.dir-btn[data-dir]').forEach(btn => {
+        btn.addEventListener('click', () => handleDirectionClick(btn.dataset.dir));
+        btn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          handleDirectionClick(btn.dataset.dir);
+        });
+      });
+
+      // 撈魚按鈕事件
+      const scoopBtn = document.getElementById('scoop-button');
+      scoopBtn.addEventListener('click', handleScoopClick);
+      scoopBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleScoopClick();
+      });
+    });
+
+    // ==================== WebSocket ====================
+    function connectWebSocket() {
+      console.log('🌐 連接 WebSocket...');
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket 已連接');
+        wsConnected = true;
+        updateWSStatus(true);
+
+        // 發送加入遊戲訊息
+        sendMessage(TOPIC_JOIN, {
+          playerId: PLAYER_ID,
+          name: `玩家 ${PLAYER_ID.substr(-4)}`,
+          timestamp: Date.now(),
+          controlType: 'advanced'
+        });
+        
+        showFeedback('✅ 已連接伺服器', '#4caf50');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (err) {
+          console.error('解析訊息錯誤:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        updateWSStatus(false);
+      };
+
+      ws.onclose = () => {
+        console.log('⚠️ WebSocket 已斷線，5秒後重連...');
+        wsConnected = false;
+        updateWSStatus(false);
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    function handleWebSocketMessage(data) {
+      if (data.type === 'mqtt_message') {
+        const topic = data.topic;
+        const payload = data.payload;
+
+        // 距離感測器數據
+        if (topic.includes('/distance')) {
+          try {
+            const distanceData = JSON.parse(payload);
+            updateDistance(distanceData.distance, distanceData.valid);
+          } catch (err) {
+            console.error('解析距離數據錯誤:', err);
+          }
+        }
+        
+        // 魚的位置狀態（從大螢幕傳來）
+        if (topic === 'esp32/fish/status') {
+          try {
+            const status = JSON.parse(payload);
+            updateFishStatus(status.fishInRange, status.requiredCombo);
+          } catch (err) {
+            console.error('解析魚狀態錯誤:', err);
+          }
+        }
+
+        // 撈魚結果
+        if (topic === 'esp32/fish/result') {
+          try {
+            const result = JSON.parse(payload);
+            if (result.playerId === PLAYER_ID) {
+              handleScoopResult(result);
+            }
+          } catch (err) {
+            console.error('解析結果錯誤:', err);
+          }
+        }
+      }
+    }
+
+    function sendMessage(topic, payload) {
+      if (!wsConnected) {
+        console.warn('WebSocket 未連接');
+        return;
+      }
+
+      const message = {
+        type: 'publish',
+        topic: topic,
+        payload: JSON.stringify(payload)
+      };
+
+      ws.send(JSON.stringify(message));
+    }
+
+    // ==================== 方向控制 ====================
+    function handleDirectionClick(direction) {
+      if (!wsConnected) {
+        showFeedback('⚠️ 未連接伺服器', '#ff9800');
+        return;
+      }
+
+      console.log('🎯 移動方向:', direction);
+
+      sendMessage(TOPIC_MOVE, {
+        playerId: PLAYER_ID,
+        direction: direction,
+        timestamp: Date.now()
+      });
+
+      // 視覺回饋
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }
+
+    // ==================== 連擊撈魚 ====================
+    function handleScoopClick() {
+      if (!wsConnected) {
+        showFeedback('⚠️ 未連接伺服器', '#ff9800');
+        return;
+      }
+
+      if (!distanceNear) {
+        showFeedback('⚠️ 請靠近螢幕（<10cm）', '#ff9800');
+        return;
+      }
+
+      if (!fishInRange) {
+        showFeedback('⚠️ 魚不在範圍內', '#ff9800');
+        return;
+      }
+
+      const now = Date.now();
+      
+      // 檢查連擊時間
+      if (now - lastComboTime > comboResetTime) {
+        // 超過時間，重置連擊
+        comboCount = 0;
+      }
+
+      // 增加連擊
+      comboCount++;
+      lastComboTime = now;
+      
+      // 更新最高連擊
+      if (comboCount > maxCombo) {
+        maxCombo = comboCount;
+        document.getElementById('max-combo').textContent = maxCombo;
+      }
+
+      // 更新顯示
+      updateComboDisplay();
+
+      // 視覺和觸覺回饋
+      const button = document.getElementById('scoop-button');
+      button.classList.add('combo-active');
+      setTimeout(() => button.classList.remove('combo-active'), 300);
+
+      if (navigator.vibrate) {
+        navigator.vibrate(100);
+      }
+
+      // 發送連擊數據
+      sendMessage(TOPIC_COMBO, {
+        playerId: PLAYER_ID,
+        combo: comboCount,
+        timestamp: now
+      });
+
+      // 檢查是否達到要求的連擊數
+      if (comboCount >= requiredCombo) {
+        performScoop();
+      }
+
+      // 清除舊的超時，設定新的
+      if (comboTimeout) {
+        clearTimeout(comboTimeout);
+      }
+      comboTimeout = setTimeout(() => {
+        if (comboCount < requiredCombo) {
+          showFeedback('⏰ 連擊超時，重新開始', '#ff9800');
+        }
+        comboCount = 0;
+        updateComboDisplay();
+      }, comboResetTime);
+    }
+
+    function performScoop() {
+      console.log(`🎣 執行撈魚！連擊: ${comboCount}`);
+
+      totalAttempts++;
+
+      sendMessage(TOPIC_SCOOP, {
+        playerId: PLAYER_ID,
+        combo: comboCount,
+        distance: currentDistance,
+        timestamp: Date.now()
+      });
+
+      showFeedback(`🎣 ${comboCount} 連擊撈魚！`, '#2196f3');
+
+      // 重置連擊
+      comboCount = 0;
+      updateComboDisplay();
+
+      // 清除超時
+      if (comboTimeout) {
+        clearTimeout(comboTimeout);
+      }
+    }
+
+    function handleScoopResult(result) {
+      console.log('📊 收到撈魚結果:', result);
+      
+      if (result.success) {
+        totalCatch++;
+        score += result.points || 1;
+        
+        document.getElementById('score').textContent = score;
+        document.getElementById('total-catch').textContent = totalCatch;
+        
+        showFeedback(`🎉 獲得 ${result.fishType || '魚'} +${result.points}分！`, '#4caf50');
+        
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
+        }
+      } else {
+        showFeedback('😢 沒撈到魚', '#f44336');
+      }
+      
+      updateStats();
+    }
+
+    // ==================== UI 更新 ====================
+    function updateDistance(distance, valid) {
+      if (valid && distance >= 0) {
+        currentDistance = Math.round(distance);
+        distanceNear = (distance < 10);
+
+        const distanceEl = document.getElementById('distance-status');
+        distanceEl.innerHTML = `
+          ${currentDistance} cm
+          <span class="status-indicator ${distanceNear ? 'indicator-green' : 'indicator-red'}"></span>
+        `;
+
+        updateButtonState();
+      }
+    }
+
+    function updateFishStatus(inRange, required) {
+      fishInRange = inRange;
+      if (required) {
+        requiredCombo = required;
+        document.getElementById('required-combo').textContent = required;
+      }
+
+      const fishEl = document.getElementById('fish-status');
+      fishEl.innerHTML = `
+        ${inRange ? '是' : '否'}
+        <span class="status-indicator ${inRange ? 'indicator-green' : 'indicator-red'}"></span>
+      `;
+
+      updateButtonState();
+    }
+
+    function updateButtonState() {
+      const button = document.getElementById('scoop-button');
+      const dirButtons = document.querySelectorAll('.dir-btn[data-dir]');
+
+      if (wsConnected && distanceNear) {
+        // 方向按鈕可用
+        dirButtons.forEach(btn => btn.classList.remove('disabled'));
+
+        // 撈魚按鈕狀態
+        if (fishInRange) {
+          button.classList.remove('disabled');
+          button.classList.add('ready');
+        } else {
+          button.classList.add('disabled');
+          button.classList.remove('ready');
+        }
+      } else {
+        // 全部停用
+        dirButtons.forEach(btn => btn.classList.add('disabled'));
+        button.classList.add('disabled');
+        button.classList.remove('ready');
+      }
+    }
+
+    function updateWSStatus(connected) {
+      const statusEl = document.getElementById('ws-status');
+      statusEl.innerHTML = `
+        ${connected ? '已連接' : '未連接'}
+        <span class="status-indicator ${connected ? 'indicator-green' : 'indicator-red'}"></span>
+      `;
+    }
+
+    function updateComboDisplay() {
+      const comboEl = document.getElementById('combo-count');
+      const barEl = document.getElementById('combo-bar');
+      
+      comboEl.textContent = comboCount;
+      
+      const percentage = Math.min((comboCount / requiredCombo) * 100, 100);
+      barEl.style.width = percentage + '%';
+      
+      if (comboCount >= requiredCombo) {
+        barEl.classList.add('complete');
+      } else {
+        barEl.classList.remove('complete');
+      }
+
+      // 觸發動畫
+      comboEl.style.animation = 'none';
+      setTimeout(() => {
+        comboEl.style.animation = 'comboPulse 0.3s';
+      }, 10);
+    }
+
+    function updateStats() {
+      const successRate = totalAttempts > 0 ? 
+        Math.round((totalCatch / totalAttempts) * 100) : 0;
+      document.getElementById('success-rate').textContent = successRate + '%';
+    }
+
+    function showFeedback(message, color) {
+      const feedbackEl = document.getElementById('feedback-message');
+      feedbackEl.textContent = message;
+      feedbackEl.style.background = color;
+      feedbackEl.style.display = 'block';
+
+      setTimeout(() => {
+        feedbackEl.style.display = 'none';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

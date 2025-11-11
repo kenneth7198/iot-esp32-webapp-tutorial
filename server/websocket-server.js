@@ -109,7 +109,13 @@ httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
   console.log('    📄 /fish.html');
   console.log('    🐟 超音波感測器撈魚互動遊戲');
   console.log('    📱 /mobile-fish-simple.html (簡易版控制器 - 推薦)');
-  console.log('    📱 /mobile-fish-scoop.html (完整版控制器)');
+  console.log('    📱 /mobile-fish-scoop.html (完整版控制器)\n');
+  
+  console.log('7️⃣  Interactive Poster 互動海報');
+  console.log('    📄 /interactive-poster.html');
+  console.log('    🎨 超音波感測器觸發孟克《吶喊》動態效果');
+  console.log('    📱 /mobile-poster-capture.html (手機拍攝控制器)');
+  console.log('    🖼️  /interactive-poster-gallery.html (10幅世界名畫藝廊 - 最新版)\n');
   
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 });
@@ -170,6 +176,48 @@ mqttClient.on('connect', () => {
   mqttClient.subscribe('esp32/+/distance', (err) => {
     if (!err) {
       console.log('[MQTT] 已訂閱主題: esp32/+/distance');
+    }
+  });
+
+  // 訂閱撈魚遊戲方向控制
+  mqttClient.subscribe('esp32/fish/direction', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/fish/direction');
+    }
+  });
+
+  // 訂閱撈魚遊戲連擊
+  mqttClient.subscribe('esp32/fish/combo', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/fish/combo');
+    }
+  });
+
+  // 訂閱撈魚遊戲舊版動作（相容性）
+  mqttClient.subscribe('esp32/fish/scoop', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/fish/scoop');
+    }
+  });
+
+  // 訂閱互動海報狀態
+  mqttClient.subscribe('poster/status', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: poster/status');
+    }
+  });
+
+  // 訂閱海報畫面撈取請求
+  mqttClient.subscribe('poster/capture/request', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: poster/capture/request');
+    }
+  });
+
+  // 訂閱畫作更新（藝廊輪播）
+  mqttClient.subscribe('poster/artwork', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: poster/artwork');
     }
   });
 });

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>撈魚遊戲 - 進階控制器使用指南</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #999;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+    }
+
+    .section h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+
+    .step {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 3px solid #4caf50;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background: #4caf50;
+      color: white;
+      text-align: center;
+      line-height: 30px;
+      border-radius: 50%;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    .feature-box {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 2px solid #e0e0e0;
+    }
+
+    .feature-icon {
+      font-size: 24px;
+      margin-right: 10px;
+    }
+
+    .control-demo {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .control-btn {
+      background: #667eea;
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .control-btn.center {
+      grid-column: 2;
+      grid-row: 2;
+      background: #f44336;
+      font-size: 18px;
+    }
+
+    .control-btn.up { grid-column: 2; grid-row: 1; }
+    .control-btn.down { grid-column: 2; grid-row: 3; }
+    .control-btn.left { grid-column: 1; grid-row: 2; }
+    .control-btn.right { grid-column: 3; grid-row: 2; }
+
+    .tip {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    .tip-icon {
+      color: #ffc107;
+      font-size: 20px;
+      margin-right: 10px;
+    }
+
+    .link-box {
+      background: #e3f2fd;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .link-box a {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 12px 30px;
+      text-decoration: none;
+      border-radius: 25px;
+      margin: 5px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .link-box a:hover {
+      background: #764ba2;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .requirements {
+      background: #ffebee;
+      border: 2px solid #f44336;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+    }
+
+    .requirements ul {
+      margin-left: 20px;
+      margin-top: 10px;
+    }
+
+    .requirements li {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎣 撈魚遊戲 - 進階控制器</h1>
+    <div class="subtitle">方向控制 + 連擊系統 使用指南</div>
+
+    <!-- 系統特色 -->
+    <div class="section">
+      <h2>🌟 新功能特色</h2>
+      
+      <div class="feature-box">
+        <span class="feature-icon">🕹️</span>
+        <strong>四方向控制</strong>
+        <p>使用方向鍵（↑↓←→）精確控制釣餌位置，追蹤魚的移動</p>
+      </div>
+
+      <div class="feature-box">
+        <span class="feature-icon">⚡</span>
+        <strong>連擊系統</strong>
+        <p>需要連續按擊 5-10 次才能成功撈起魚，增加遊戲挑戰性</p>
+      </div>
+
+      <div class="feature-box">
+        <span class="feature-icon">📏</span>
+        <strong>距離限制</strong>
+        <p>手機必須靠近超音波感測器（< 10cm）才能啟動控制</p>
+      </div>
+
+      <div class="feature-box">
+        <span class="feature-icon">🎯</span>
+        <strong>範圍判定</strong>
+        <p>釣餌周圍有抓取範圍圈，魚必須進入範圍內才能撈起</p>
+      </div>
+    </div>
+
+    <!-- 控制界面 -->
+    <div class="section">
+      <h2>🎮 控制界面說明</h2>
+      
+      <div class="control-demo">
+        <div class="control-btn up">↑</div>
+        <div class="control-btn left">←</div>
+        <div class="control-btn center">⚡<br>連擊</div>
+        <div class="control-btn right">→</div>
+        <div class="control-btn down">↓</div>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <strong>操作說明：</strong>
+        <ul style="margin-left: 30px; margin-top: 10px;">
+          <li><strong>方向鍵</strong>：移動釣餌位置（每次移動 80 像素）</li>
+          <li><strong>中央按鈕</strong>：連擊攻擊（需要 5-10 次才能撈魚）</li>
+          <li><strong>圓形進度條</strong>：顯示當前連擊進度（0-10）</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 使用步驟 -->
+    <div class="section">
+      <h2>📋 使用步驟</h2>
+
+      <div class="step">
+        <span class="step-number">1</span>
+        <strong>開啟大螢幕顯示</strong>
+        <p>在電腦或大螢幕上打開 <code>fish.html</code></p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">2</span>
+        <strong>掃描 QR Code</strong>
+        <p>用手機掃描螢幕右上角的 QR Code，開啟控制器</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        <strong>靠近感測器</strong>
+        <p>將手機靠近超音波距離感測器（< 10cm），控制器會自動啟動</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">4</span>
+        <strong>移動釣餌</strong>
+        <p>使用方向鍵移動釣餌，追蹤螢幕上游動的魚</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">5</span>
+        <strong>對準目標</strong>
+        <p>讓魚進入釣餌周圍的半透明圓圈範圍內</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">6</span>
+        <strong>連擊撈魚</strong>
+        <p>快速連續按中央按鈕 5-10 次，當連擊數達標且魚在範圍內時，成功撈起！</p>
+      </div>
+    </div>
+
+    <!-- 系統需求 -->
+    <div class="requirements">
+      <h2 style="color: #f44336; margin-bottom: 10px;">⚙️ 系統需求</h2>
+      <ul>
+        <li><strong>硬體：</strong>ESP32 + HC-SR04 超音波距離感測器</li>
+        <li><strong>網路：</strong>所有裝置連接到同一 Wi-Fi（192.168.100.x）</li>
+        <li><strong>服務：</strong>
+          <ul style="margin-left: 20px;">
+            <li>Mosquitto MQTT Broker (port 1883)</li>
+            <li>WebSocket Server (port 8080)</li>
+            <li>HTTP Server (port 8081)</li>
+          </ul>
+        </li>
+        <li><strong>ESP32：</strong>持續發送距離資料到 <code>esp32/device-01/distance</code></li>
+      </ul>
+    </div>
+
+    <!-- 遊戲提示 -->
+    <div class="section">
+      <h2>🎯 遊戲技巧</h2>
+      
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <strong>撈魚策略：</strong>
+        <ul style="margin-left: 30px; margin-top: 10px;">
+          <li>先觀察魚的游動路徑，預判魚的移動方向</li>
+          <li>將釣餌移動到魚的前方等待</li>
+          <li>當魚進入範圍圈時，立即開始快速連擊</li>
+          <li>優先選擇高分數的稀有魚（帶光環或閃光的魚）</li>
+          <li>連擊有 2 秒時效，如果中斷需要重新累積</li>
+        </ul>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">⚠️</span>
+        <strong>注意事項：</strong>
+        <ul style="margin-left: 30px; margin-top: 10px;">
+          <li>手機必須保持在感測器 10cm 內才能操作</li>
+          <li>連擊按鈕有 0.5 秒冷卻時間，避免誤觸</li>
+          <li>同一時間只能有一位玩家控制釣餌</li>
+          <li>如果連擊失敗，請重新對準魚再試一次</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MQTT 主題 -->
+    <div class="section">
+      <h2>📡 MQTT 主題列表</h2>
+      
+      <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+        <tr style="background: #667eea; color: white;">
+          <th style="padding: 10px; text-align: left;">主題</th>
+          <th style="padding: 10px; text-align: left;">用途</th>
+          <th style="padding: 10px; text-align: left;">資料格式</th>
+        </tr>
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;"><code>esp32/+/distance</code></td>
+          <td style="padding: 10px;">距離資料</td>
+          <td style="padding: 10px;"><code>{distance, valid}</code></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;"><code>esp32/fish/direction</code></td>
+          <td style="padding: 10px;">方向控制</td>
+          <td style="padding: 10px;"><code>{direction, playerId, timestamp}</code></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;"><code>esp32/fish/combo</code></td>
+          <td style="padding: 10px;">連擊動作</td>
+          <td style="padding: 10px;"><code>{playerId, comboCount, timestamp}</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px;"><code>esp32/fish/scoop</code></td>
+          <td style="padding: 10px;">舊版撈魚</td>
+          <td style="padding: 10px;"><code>{playerId, action, timestamp}</code></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- 版本比較 -->
+    <div class="section">
+      <h2>🔄 版本比較</h2>
+      
+      <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+        <tr style="background: #667eea; color: white;">
+          <th style="padding: 10px;">功能</th>
+          <th style="padding: 10px;">簡易版</th>
+          <th style="padding: 10px;">進階版</th>
+        </tr>
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;">控制方式</td>
+          <td style="padding: 10px;">單按鈕</td>
+          <td style="padding: 10px; background: #e8f5e9;">方向鍵 + 連擊</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;">釣餌控制</td>
+          <td style="padding: 10px;">固定位置</td>
+          <td style="padding: 10px; background: #e8f5e9;">可移動</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;">難度</td>
+          <td style="padding: 10px;">簡單</td>
+          <td style="padding: 10px; background: #e8f5e9;">中等</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;">策略性</td>
+          <td style="padding: 10px;">低</td>
+          <td style="padding: 10px; background: #e8f5e9;">高</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px;">適合對象</td>
+          <td style="padding: 10px;">休閒玩家</td>
+          <td style="padding: 10px; background: #e8f5e9;">進階玩家</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- 快速連結 -->
+    <div class="link-box">
+      <h3 style="margin-bottom: 15px; color: #667eea;">🔗 快速連結</h3>
+      <a href="fish.html">🎮 開始遊戲（大螢幕）</a>
+      <a href="mobile-fish-control.html">📱 進階控制器</a>
+      <a href="mobile-fish-simple.html">📱 簡易控制器</a>
+      <a href="mobile-fish-index.html">📋 選擇版本</a>
+    </div>
+
+    <!-- 故障排除 -->
+    <div class="section">
+      <h2>🔧 故障排除</h2>
+      
+      <div class="tip" style="background: #ffebee; border-color: #f44336;">
+        <span class="tip-icon" style="color: #f44336;">❌</span>
+        <strong>按鈕無反應：</strong>
+        <ul style="margin-left: 30px; margin-top: 10px;">
+          <li>檢查手機是否在感測器 10cm 內</li>
+          <li>確認 WebSocket 狀態為「已連接」（綠色）</li>
+          <li>檢查 MQTT broker 是否運行</li>
+          <li>查看瀏覽器開發者工具的 Console 日誌</li>
+        </ul>
+      </div>
+
+      <div class="tip" style="background: #fff3cd; border-color: #ffc107;">
+        <span class="tip-icon">⚠️</span>
+        <strong>釣餌不出現：</strong>
+        <ul style="margin-left: 30px; margin-top: 10px;">
+          <li>至少按一次方向鍵或連擊按鈕來啟動釣餌</li>
+          <li>刷新 fish.html 頁面重新載入</li>
+          <li>檢查是否訂閱了正確的 MQTT 主題</li>
+        </ul>
+      </div>
+
+      <div class="tip" style="background: #e3f2fd; border-color: #2196f3;">
+        <span class="tip-icon" style="color: #2196f3;">ℹ️</span>
+        <strong>連擊無法撈魚：</strong>
+        <ul style="margin-left: 30px; margin-top: 10px;">
+          <li>確保魚進入釣餌周圍的半透明圓圈範圍</li>
+          <li>確認連擊數達到 5-10 次（查看圓形進度條）</li>
+          <li>不要中斷連擊超過 2 秒</li>
+          <li>有些魚移動很快，需要預判位置</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 開發資訊 -->
+    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; color: #999; font-size: 12px;">
+      <p>ESP32 IoT Fish Game - Advanced Controller</p>
+      <p>WebSocket: ws://192.168.100.200:8080 | HTTP: http://192.168.100.200:8081</p>
+      <p style="margin-top: 10px;">Built with ❤️ using p5.js, MQTT, and WebSocket</p>
+    </div>
+  </div>
+</body>
+</html>

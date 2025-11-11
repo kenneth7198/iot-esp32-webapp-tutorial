@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>� 捕捉吶喊 - 手機控制器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Arial', 'Microsoft JhengHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      touch-action: none;
+    }
+
+    /* 頂部標題區 */
+    #header {
+      padding: 20px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    #header h1 {
+      font-size: 28px;
+      margin-bottom: 5px;
+    }
+
+    #header p {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    /* 主要內容區 */
+    #main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    /* 狀態卡片 */
+    .status-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+    }
+
+    .status-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .status-value {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-left: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .indicator-green {
+      background: #4caf50;
+      box-shadow: 0 0 10px #4caf50;
+    }
+
+    .indicator-red {
+      background: #f44336;
+      box-shadow: 0 0 10px #f44336;
+    }
+
+    .indicator-yellow {
+      background: #ffc107;
+      box-shadow: 0 0 10px #ffc107;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    /* 撈取按鈕區 */
+    #capture-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    #capture-button {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border: none;
+      color: white;
+      font-size: 60px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    #capture-button:active {
+      transform: scale(0.95);
+      box-shadow: 0 5px 15px rgba(245, 87, 108, 0.3);
+    }
+
+    #capture-button.disabled {
+      background: linear-gradient(135deg, #999 0%, #666 100%);
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    #capture-button .button-text {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    #capture-hint {
+      text-align: center;
+      font-size: 16px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 15px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* 已撈取畫面展示區 */
+    #captured-gallery {
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    #captured-gallery h3 {
+      margin-bottom: 15px;
+      font-size: 20px;
+      text-align: center;
+    }
+
+    #gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .captured-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .captured-item:active {
+      transform: scale(0.95);
+    }
+
+    .captured-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .captured-item .timestamp {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      right: 5px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 10px;
+      padding: 3px;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .captured-item .delete-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 30px;
+      height: 30px;
+      background: rgba(244, 67, 54, 0.9);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 空狀態 */
+    #empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      opacity: 0.7;
+    }
+
+    #empty-state .icon {
+      font-size: 60px;
+      margin-bottom: 10px;
+    }
+
+    /* 撈取動畫 */
+    .capture-animation {
+      position: fixed;
+      width: 100px;
+      height: 100px;
+      background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1000;
+      animation: captureRipple 1s ease-out;
+    }
+
+    @keyframes captureRipple {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(5);
+        opacity: 0;
+      }
+    }
+
+    /* 成功訊息 */
+    .success-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(76, 175, 80, 0.95);
+      color: white;
+      padding: 30px 50px;
+      border-radius: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      z-index: 2000;
+      animation: successPop 2s forwards;
+    }
+
+    @keyframes successPop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+      80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    }
+
+    /* 全螢幕預覽 */
+    #fullscreen-preview {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 3000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    #fullscreen-preview.show {
+      display: flex;
+    }
+
+    #fullscreen-preview img {
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 10px;
+    }
+
+    #fullscreen-preview .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid white;
+      border-radius: 50%;
+      color: white;
+      font-size: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 統計資訊 */
+    #stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 15px;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffc107;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- 頂部標題 -->
+  <div id="header">
+    <h1>📸 世界名畫收藏</h1>
+    <p>當海報變動態時，拍攝畫作到手機！</p>
+  </div>
+
+  <!-- 當前畫作資訊 -->
+  <div id="current-artwork" class="status-card" style="margin: 15px; margin-bottom: 0;">
+    <div style="text-align: center; padding: 10px 0;">
+      <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;" id="artwork-title">
+        🎨 載入中...
+      </div>
+      <div style="font-size: 14px; opacity: 0.8;" id="artwork-artist">
+        正在連接藝廊...
+      </div>
+    </div>
+  </div>
+
+  <!-- 主要內容 -->
+  <div id="main-content">
+    <!-- 狀態卡片 -->
+    <div class="status-card">
+      <div class="status-row">
+        <span class="status-label">連線狀態</span>
+        <span class="status-value" id="ws-status">
+          連接中...
+          <span class="status-indicator indicator-yellow"></span>
+        </span>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">距離感測</span>
+        <span class="status-value" id="distance-status">
+          -- cm
+          <span class="status-indicator indicator-red"></span>
+        </span>
+      </div>
+
+      <div class="status-row">
+        <span class="status-label">海報狀態</span>
+        <span class="status-value" id="poster-status">
+          靜態
+          <span class="status-indicator indicator-yellow"></span>
+        </span>
+      </div>
+
+      <!-- 統計 -->
+      <div id="stats">
+        <div class="stat-item">
+          <div class="stat-value" id="total-captures">0</div>
+          <div class="stat-label">總拍攝數</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="today-captures">0</div>
+          <div class="stat-label">今日拍攝</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 撈取按鈕區 -->
+    <div id="capture-zone">
+      <button id="capture-button" class="disabled">
+        <span style="font-size: 80px;">📸</span>
+        <span class="button-text">拍攝畫面</span>
+      </button>
+      <div id="capture-hint">
+        💡 當海報變成動態時才能拍攝！
+      </div>
+    </div>
+
+    <!-- 已撈取畫面展示 -->
+    <div id="captured-gallery">
+      <h3>📸 我的收藏 (<span id="gallery-count">0</span>)</h3>
+      <div id="gallery-grid">
+        <div id="empty-state">
+          <div class="icon">🎨</div>
+          <p>還沒有拍攝任何畫面<br>靠近海報並按下拍攝按鈕！</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全螢幕預覽 -->
+  <div id="fullscreen-preview">
+    <button class="close-btn" onclick="closeFullscreen()">×</button>
+    <img id="preview-image" src="" alt="預覽">
+  </div>
+
+  <script>
+    // ==================== 設定 ====================
+    const WS_URL = 'ws://192.168.100.200:8080';
+    const TRIGGER_DISTANCE = 10;
+    const STORAGE_KEY = 'scream_captures';
+
+    // ==================== 狀態變數 ====================
+    let ws;
+    let wsConnected = false;
+    let currentDistance = 999;
+    let isPosterActive = false;
+    let capturedImages = [];
+    let totalCaptures = 0;
+    let todayCaptures = 0;
+    let currentArtwork = null; // 當前畫作資訊
+
+    // DOM 元素
+    const captureButton = document.getElementById('capture-button');
+    const captureHint = document.getElementById('capture-hint');
+    const galleryGrid = document.getElementById('gallery-grid');
+    const emptyState = document.getElementById('empty-state');
+
+    // ==================== 初始化 ====================
+    window.addEventListener('load', () => {
+      console.log('📱 手機撈取控制器啟動');
+      
+      // 載入已儲存的畫面
+      loadCapturedImages();
+      
+      // 連接 WebSocket
+      connectWebSocket();
+      
+      // 撈取按鈕事件
+      captureButton.addEventListener('click', handleCapture);
+    });
+
+    // ==================== WebSocket 連接 ====================
+    function connectWebSocket() {
+      console.log('🔌 連接 WebSocket:', WS_URL);
+      
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket 已連接');
+        wsConnected = true;
+        updateWSStatus(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (err) {
+          console.error('解析訊息錯誤:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        updateWSStatus(false);
+      };
+
+      ws.onclose = () => {
+        console.log('⚠️ WebSocket 已斷線，5秒後重連...');
+        wsConnected = false;
+        updateWSStatus(false);
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    function handleWebSocketMessage(data) {
+      if (data.type === 'mqtt_message') {
+        const topic = data.topic;
+        const payload = data.payload;
+
+        // 處理距離感測器數據
+        if (topic.includes('/distance')) {
+          try {
+            const distanceData = JSON.parse(payload);
+            updateDistance(distanceData.distance, distanceData.valid);
+          } catch (err) {
+            console.error('解析距離數據錯誤:', err);
+          }
+        }
+
+        // 處理海報狀態變化
+        if (topic.includes('poster/status')) {
+          try {
+            const statusData = JSON.parse(payload);
+            updatePosterStatus(statusData.active);
+          } catch (err) {
+            console.error('解析狀態數據錯誤:', err);
+          }
+        }
+
+        // 處理畫作更新
+        if (topic.includes('poster/artwork')) {
+          try {
+            const artworkData = JSON.parse(payload);
+            updateCurrentArtwork(artworkData);
+          } catch (err) {
+            console.error('解析畫作數據錯誤:', err);
+          }
+        }
+      }
+    }
+
+    // ==================== 距離處理 ====================
+    function updateDistance(distance, valid) {
+      if (!valid || distance < 0) return;
+
+      currentDistance = Math.round(distance);
+      updateDistanceStatus(currentDistance);
+
+      // 自動判斷海報狀態
+      if (currentDistance < TRIGGER_DISTANCE) {
+        updatePosterStatus(true);
+      } else if (currentDistance > 50) {
+        updatePosterStatus(false);
+      }
+    }
+
+    function updatePosterStatus(active) {
+      isPosterActive = active;
+      
+      const statusEl = document.getElementById('poster-status');
+      
+      if (active) {
+        statusEl.innerHTML = `
+          動態中 🌊
+          <span class="status-indicator indicator-green"></span>
+        `;
+        captureButton.classList.remove('disabled');
+        captureHint.innerHTML = '✨ 現在可以拍攝畫面了！';
+        captureHint.style.background = 'rgba(76, 175, 80, 0.3)';
+      } else {
+        statusEl.innerHTML = `
+          靜態
+          <span class="status-indicator indicator-yellow"></span>
+        `;
+        captureButton.classList.add('disabled');
+        captureHint.innerHTML = '💡 當海報變成動態時才能拍攝！';
+        captureHint.style.background = 'rgba(255, 255, 255, 0.2)';
+      }
+    }
+
+    // ==================== 畫作資訊更新 ====================
+    function updateCurrentArtwork(artworkData) {
+      currentArtwork = artworkData;
+      console.log('🎨 收到畫作更新:', artworkData);
+
+      // 更新標題顯示
+      const titleEl = document.getElementById('artwork-title');
+      const artistEl = document.getElementById('artwork-artist');
+
+      if (artworkData) {
+        titleEl.textContent = `🎨 ${artworkData.title}`;
+        artistEl.textContent = `${artworkData.artist} (${artworkData.year})`;
+        
+        // 添加閃爍動畫提示更新
+        titleEl.style.animation = 'none';
+        setTimeout(() => {
+          titleEl.style.animation = 'float 3s ease-in-out infinite';
+        }, 10);
+      }
+    }
+
+    // ==================== 撈取功能 ====================
+    function handleCapture(e) {
+      if (!isPosterActive) {
+        showMessage('❌ 海報尚未激活！', 'error');
+        return;
+      }
+
+      if (!wsConnected) {
+        showMessage('❌ 未連接伺服器！', 'error');
+        return;
+      }
+
+      // 創建撈取動畫
+      createCaptureAnimation(e.clientX, e.clientY);
+
+      // 發送撈取請求到伺服器
+      sendCaptureRequest();
+
+      // 震動反饋（如果支援）
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 100, 50]);
+      }
+    }
+
+    function sendCaptureRequest() {
+      const captureData = {
+        type: 'capture_request',
+        timestamp: Date.now(),
+        distance: currentDistance
+      };
+
+      ws.send(JSON.stringify(captureData));
+      console.log('📸 已發送拍攝請求');
+
+      // 模擬接收畫面（實際應該從伺服器接收）
+      setTimeout(() => {
+        receiveCapturedImage();
+      }, 500);
+    }
+
+    function receiveCapturedImage() {
+      // 使用當前畫作資訊
+      const capturedData = {
+        id: Date.now(),
+        timestamp: new Date().toLocaleString('zh-TW'),
+        distance: currentDistance,
+        artworkTitle: currentArtwork ? currentArtwork.title : '未知畫作',
+        artworkArtist: currentArtwork ? currentArtwork.artist : '未知藝術家',
+        artworkYear: currentArtwork ? currentArtwork.year : '',
+        // 使用當前畫作的圖片 URL
+        imageUrl: currentArtwork ? currentArtwork.imageUrl : 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/400px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg'
+      };
+
+      // 新增到收藏
+      capturedImages.unshift(capturedData);
+      totalCaptures++;
+      todayCaptures++;
+
+      // 儲存到 localStorage
+      saveCapturedImages();
+
+      // 更新顯示
+      renderGallery();
+      updateStats();
+
+      // 顯示成功訊息
+      showMessage(`✅ 已收藏《${capturedData.artworkTitle}》`, 'success');
+
+      console.log('📸 已拍攝畫面:', capturedData);
+    }
+
+    // ==================== 畫廊管理 ====================
+    function loadCapturedImages() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          capturedImages = JSON.parse(saved);
+          totalCaptures = capturedImages.length;
+          
+          // 計算今日撈取數
+          const today = new Date().toDateString();
+          todayCaptures = capturedImages.filter(img => {
+            const imgDate = new Date(img.timestamp).toDateString();
+            return imgDate === today;
+          }).length;
+
+          renderGallery();
+          updateStats();
+        }
+      } catch (err) {
+        console.error('載入畫面失敗:', err);
+      }
+    }
+
+    function saveCapturedImages() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(capturedImages));
+      } catch (err) {
+        console.error('儲存畫面失敗:', err);
+      }
+    }
+
+    function renderGallery() {
+      if (capturedImages.length === 0) {
+        galleryGrid.innerHTML = `
+          <div id="empty-state">
+            <div class="icon">🎨</div>
+            <p>還沒有拍攝任何畫面<br>靠近海報並按下拍攝按鈕！</p>
+          </div>
+        `;
+        return;
+      }
+
+      galleryGrid.innerHTML = capturedImages.map(img => `
+        <div class="captured-item" onclick="showFullscreen('${img.imageUrl}', '${img.artworkTitle}', '${img.artworkArtist}', '${img.artworkYear}')">
+          <img src="${img.imageUrl}" alt="${img.artworkTitle || '畫作'}">
+          <div class="timestamp">
+            ${img.artworkTitle ? img.artworkTitle : '未知畫作'}<br>
+            ${img.timestamp}
+          </div>
+          <button class="delete-btn" onclick="event.stopPropagation(); deleteImage(${img.id})">×</button>
+        </div>
+      `).join('');
+
+      document.getElementById('gallery-count').textContent = capturedImages.length;
+    }
+
+    function deleteImage(id) {
+      if (confirm('確定要刪除這張畫面嗎？')) {
+        capturedImages = capturedImages.filter(img => img.id !== id);
+        totalCaptures = capturedImages.length;
+        saveCapturedImages();
+        renderGallery();
+        updateStats();
+        showMessage('🗑️ 已刪除', 'info');
+      }
+    }
+
+    function showFullscreen(imageUrl, title, artist, year) {
+      const previewImg = document.getElementById('preview-image');
+      previewImg.src = imageUrl;
+      previewImg.alt = title || '畫作';
+      
+      // 更新預覽視窗的標題（如果需要）
+      const previewDiv = document.getElementById('fullscreen-preview');
+      
+      // 移除舊的標題（如果存在）
+      const oldCaption = previewDiv.querySelector('.artwork-caption');
+      if (oldCaption) oldCaption.remove();
+      
+      // 添加畫作資訊
+      if (title) {
+        const caption = document.createElement('div');
+        caption.className = 'artwork-caption';
+        caption.style.cssText = `
+          position: absolute;
+          bottom: 30px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 15px 30px;
+          border-radius: 15px;
+          text-align: center;
+          font-size: 18px;
+        `;
+        caption.innerHTML = `
+          <div style="font-weight: bold; margin-bottom: 5px;">${title}</div>
+          <div style="font-size: 14px; opacity: 0.9;">${artist} (${year})</div>
+        `;
+        previewDiv.appendChild(caption);
+      }
+      
+      previewDiv.classList.add('show');
+    }
+
+    function closeFullscreen() {
+      document.getElementById('fullscreen-preview').classList.remove('show');
+    }
+
+    function updateStats() {
+      document.getElementById('total-captures').textContent = totalCaptures;
+      document.getElementById('today-captures').textContent = todayCaptures;
+    }
+
+    // ==================== 視覺效果 ====================
+    function createCaptureAnimation(x, y) {
+      const animation = document.createElement('div');
+      animation.className = 'capture-animation';
+      animation.style.left = x + 'px';
+      animation.style.top = y + 'px';
+      document.body.appendChild(animation);
+
+      setTimeout(() => {
+        animation.remove();
+      }, 1000);
+    }
+
+    function showMessage(text, type) {
+      const message = document.createElement('div');
+      message.className = 'success-message';
+      message.textContent = text;
+      
+      if (type === 'error') {
+        message.style.background = 'rgba(244, 67, 54, 0.95)';
+      } else if (type === 'info') {
+        message.style.background = 'rgba(33, 150, 243, 0.95)';
+      }
+      
+      document.body.appendChild(message);
+
+      setTimeout(() => {
+        message.remove();
+      }, 2000);
+    }
+
+    // ==================== UI 更新 ====================
+    function updateWSStatus(connected) {
+      const statusEl = document.getElementById('ws-status');
+      
+      if (connected) {
+        statusEl.innerHTML = `
+          已連接
+          <span class="status-indicator indicator-green"></span>
+        `;
+      } else {
+        statusEl.innerHTML = `
+          未連接
+          <span class="status-indicator indicator-red"></span>
+        `;
+      }
+    }
+
+    function updateDistanceStatus(distance) {
+      const statusEl = document.getElementById('distance-status');
+      const isNear = distance < TRIGGER_DISTANCE;
+      
+      statusEl.innerHTML = `
+        ${distance} cm
+        <span class="status-indicator ${isNear ? 'indicator-green' : 'indicator-red'}"></span>
+      `;
+    }
+
+    // ==================== 測試功能 (開發用) ====================
+    // 雙擊標題進入測試模式
+    document.getElementById('header').addEventListener('dblclick', () => {
+      const testMode = confirm('進入測試模式？\n可以模擬拍攝畫面');
+      if (testMode) {
+        updatePosterStatus(true);
+        alert('✅ 測試模式啟動！\n現在可以直接拍攝畫面');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -181,8 +181,8 @@
     </div>
 
     <div class="qr-code">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://192.168.100.200:8081/mobile-fish-simple.html" alt="手機控制器 QR Code">
-      <div class="qr-text">掃描加入遊戲<br>手機控制器</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://192.168.100.200:8081/mobile-fish-control.html" alt="手機控制器 QR Code">
+      <div class="qr-text">掃描加入遊戲<br>🎮 進階控制器<br><small style="color: #999;">(方向+連擊)</small></div>
     </div>
   </div>
 
@@ -200,9 +200,26 @@
     const TRIGGER_DISTANCE = 10; // 觸發距離 (cm)
 
     // 玩家系統
-    let players = new Map();    // 儲存所有連接的玩家 {playerId: {name, score, color}}
+    let players = new Map();    // 儲存所有連接的玩家 {playerId: {name, score, color, combo}}
     let playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
     let nextColorIndex = 0;
+
+    // 釣餌系統
+    let bait = {
+      x: 0,
+      y: 0,
+      size: 40,
+      targetX: 0,
+      targetY: 0,
+      moveSpeed: 5,
+      catchRange: 80, // 撈魚範圍
+      playerId: null, // 當前控制釣餌的玩家
+      comboCount: 0,
+      requiredCombo: 5, // 需要的連擊數
+      comboResetTime: 2000, // 連擊重置時間
+      lastComboTime: 0,
+      isActive: false // 是否有玩家在控制
+    };
 
     // 魚的陣列
     let fishes = [];
@@ -544,6 +561,189 @@
       }
     }
 
+    // ==================== 釣餌系統函數 ====================
+    function initBait() {
+      bait.x = width / 2;
+      bait.y = height / 2;
+      bait.targetX = bait.x;
+      bait.targetY = bait.y;
+    }
+
+    function updateBait() {
+      // 平滑移動到目標位置
+      bait.x = lerp(bait.x, bait.targetX, 0.2);
+      bait.y = lerp(bait.y, bait.targetY, 0.2);
+      
+      // 限制在畫面內
+      bait.x = constrain(bait.x, bait.size, width - bait.size);
+      bait.y = constrain(bait.y, bait.size + 60, height - bait.size);
+      
+      // 檢查連擊是否過期
+      if (bait.comboCount > 0 && millis() - bait.lastComboTime > bait.comboResetTime) {
+        bait.comboCount = 0;
+      }
+    }
+
+    function moveBait(direction) {
+      const moveDistance = 80; // 每次移動的距離
+      
+      switch(direction) {
+        case 'up':
+          bait.targetY -= moveDistance;
+          break;
+        case 'down':
+          bait.targetY += moveDistance;
+          break;
+        case 'left':
+          bait.targetX -= moveDistance;
+          break;
+        case 'right':
+          bait.targetX += moveDistance;
+          break;
+      }
+      
+      // 限制目標位置在畫面內
+      bait.targetX = constrain(bait.targetX, bait.size, width - bait.size);
+      bait.targetY = constrain(bait.targetY, bait.size + 60, height - bait.size);
+    }
+
+    function addComboHit(playerId) {
+      // 更新連擊計數
+      bait.comboCount++;
+      bait.lastComboTime = millis();
+      bait.playerId = playerId;
+      
+      // 檢查是否可以撈魚
+      if (bait.comboCount >= bait.requiredCombo) {
+        tryTocatchFish(playerId);
+      }
+    }
+
+    function tryTocatchFish(playerId) {
+      // 檢查釣餌範圍內是否有魚
+      let caughtFish = null;
+      let maxPoints = 0;
+      
+      for (let fish of fishes) {
+        if (fish.isNear(bait.x, bait.y, bait.catchRange)) {
+          // 優先抓分數高的魚
+          if (fish.points > maxPoints) {
+            caughtFish = fish;
+            maxPoints = fish.points;
+          }
+        }
+      }
+      
+      if (caughtFish) {
+        // 成功撈到魚！
+        catchFish(caughtFish, playerId);
+        // 重置連擊
+        bait.comboCount = 0;
+      }
+    }
+
+    function catchFish(fish, playerId) {
+      // 更新玩家分數
+      if (players.has(playerId)) {
+        let player = players.get(playerId);
+        player.score += fish.points;
+        players.set(playerId, player);
+        
+        // 顯示通知
+        showNotification(`${player.name} 撈到 ${fish.emoji} ${fish.name} +${fish.points}分！`, player.color);
+      }
+      
+      // 產生抓取特效
+      createCatchEffect(fish.x, fish.y, fish.color, fish.emoji);
+      
+      // 重置魚的位置
+      fish.reset();
+      
+      // 播放音效（如果有）
+      playSound('catch');
+    }
+
+    function drawBait() {
+      if (!bait.isActive) return;
+      
+      push();
+      translate(bait.x, bait.y);
+      
+      // 繪製釣線
+      stroke(100, 80, 60);
+      strokeWeight(2);
+      line(0, 0, 0, -height + bait.y - 20);
+      
+      // 繪製魚鉤
+      noStroke();
+      fill(180, 180, 180);
+      
+      // 鉤子主體
+      ellipse(0, 0, bait.size * 0.6, bait.size * 0.6);
+      
+      // 鉤子尖端
+      triangle(-8, 0, 8, 0, 0, 15);
+      
+      // 誘餌（紅色小球）
+      fill(255, 50, 50);
+      ellipse(0, -5, 12, 12);
+      
+      // 光澤效果
+      fill(255, 255, 255, 150);
+      ellipse(-3, -7, 4, 4);
+      
+      // 繪製抓取範圍（半透明圓圈）
+      noFill();
+      stroke(100, 200, 255, 100);
+      strokeWeight(2);
+      ellipse(0, 0, bait.catchRange * 2, bait.catchRange * 2);
+      
+      // 如果正在連擊，顯示進度圈
+      if (bait.comboCount > 0) {
+        let progress = bait.comboCount / bait.requiredCombo;
+        let angle = map(progress, 0, 1, 0, TWO_PI);
+        
+        noFill();
+        stroke(255, 200, 0, 200);
+        strokeWeight(4);
+        arc(0, 0, bait.catchRange * 2 + 10, bait.catchRange * 2 + 10, -PI/2, -PI/2 + angle);
+        
+        // 連擊數字
+        fill(255, 200, 0);
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(24);
+        text(bait.comboCount + '/' + bait.requiredCombo, 0, -bait.catchRange - 25);
+      }
+      
+      pop();
+    }
+
+    function drawBaitInfo() {
+      if (!bait.isActive) return;
+      
+      // 顯示控制提示
+      push();
+      fill(0, 0, 0, 150);
+      noStroke();
+      rect(10, height - 80, 200, 70, 5);
+      
+      fill(255);
+      textAlign(LEFT, TOP);
+      textSize(14);
+      text('🎣 釣餌控制中', 20, height - 70);
+      
+      if (bait.playerId && players.has(bait.playerId)) {
+        let player = players.get(bait.playerId);
+        fill(player.color);
+        text('👤 ' + player.name, 20, height - 50);
+      }
+      
+      fill(255, 200, 0);
+      text('⚡ 連擊: ' + bait.comboCount + '/' + bait.requiredCombo, 20, height - 30);
+      pop();
+    }
+
     // ==================== p5.js 設定 ====================
     function setup() {
       createCanvas(windowWidth, windowHeight);
@@ -552,6 +752,9 @@
       for (let i = 0; i < FISH_COUNT; i++) {
         fishes.push(new Fish());
       }
+
+      // 初始化釣餌
+      initBait();
 
       // 連接 WebSocket
       connectWebSocket();
@@ -570,8 +773,15 @@
         fish.display();
       }
 
+      // 更新並繪製釣餌
+      updateBait();
+      drawBait();
+
       // 繪製距離感測器視覺化
       drawDistanceSensor();
+      
+      // 繪製釣餌資訊
+      drawBaitInfo();
       
       // 更新特效
       updateScorePopups();
@@ -725,7 +935,27 @@
           }
         }
 
-        // 手機撈魚動作
+        // 方向控制（新增）
+        if (topic.includes('/fish/direction')) {
+          try {
+            const directionData = JSON.parse(payload);
+            handleDirectionControl(directionData);
+          } catch (err) {
+            console.error('解析方向數據錯誤:', err);
+          }
+        }
+
+        // 連擊按鈕（新增）
+        if (topic.includes('/fish/combo')) {
+          try {
+            const comboData = JSON.parse(payload);
+            handleComboHit(comboData);
+          } catch (err) {
+            console.error('解析連擊數據錯誤:', err);
+          }
+        }
+
+        // 手機撈魚動作（舊版相容）
         if (topic.includes('/fish/scoop')) {
           try {
             const scoopData = JSON.parse(payload);
@@ -745,6 +975,37 @@
           }
         }
       }
+    }
+
+    function handleDirectionControl(data) {
+      const { direction, playerId } = data;
+      
+      // 啟動釣餌系統
+      if (!bait.isActive) {
+        bait.isActive = true;
+      }
+      
+      // 更新釣餌控制者
+      bait.playerId = playerId;
+      
+      // 移動釣餌
+      moveBait(direction);
+      
+      console.log(`🎮 ${playerId} 控制方向: ${direction}`);
+    }
+
+    function handleComboHit(data) {
+      const { playerId, comboCount } = data;
+      
+      // 啟動釣餌系統
+      if (!bait.isActive) {
+        bait.isActive = true;
+      }
+      
+      // 添加連擊
+      addComboHit(playerId);
+      
+      console.log(`⚡ ${playerId} 連擊: ${bait.comboCount}/${bait.requiredCombo}`);
     }
 
     function updateDistance(distance, valid) {
@@ -990,6 +1251,40 @@
           stars.splice(i, 1);
         }
       }
+    }
+
+    // 抓取特效（釣餌系統專用）
+    function createCatchEffect(x, y, fishColor, emoji) {
+      // 創建分數彈出
+      // createScorePopup 已經在 handleScoopAction 中處理
+
+      // 創建粒子爆炸效果
+      for (let i = 0; i < 20; i++) {
+        let angle = random(TWO_PI);
+        let speed = random(2, 6);
+        fireworks.push({
+          x: x,
+          y: y,
+          vx: cos(angle) * speed,
+          vy: sin(angle) * speed - 2,
+          color: color(fishColor),
+          life: 1.0
+        });
+      }
+
+      // 創建文字動畫
+      createScorePopup(x, y, 0, emoji + ' 抓到了！');
+    }
+
+    // 音效播放（未實作，預留介面）
+    function playSound(soundName) {
+      // TODO: 添加音效
+      console.log(`🔊 播放音效: ${soundName}`);
+    }
+
+    // 顯示通知訊息
+    function showNotification(message, color = '#4fc3f7') {
+      showGameMessage(message, color);
     }
 
     function updatePlayerList() {
