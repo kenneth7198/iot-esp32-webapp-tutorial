@@ -286,10 +286,14 @@
       padding: 20px;
       z-index: 100;
       border: 2px solid rgba(255, 255, 255, 0.3);
-      display: flex;
+      display: none; /* 預設隱藏 */
       gap: 10px;
       flex-direction: column;
       align-items: center;
+    }
+
+    #test-controls.visible {
+      display: flex; /* 調試模式開啟時顯示 */
     }
 
     #test-controls h3 {
@@ -1104,11 +1108,13 @@
     // ==================== 調試功能 ====================
     function toggleDebug() {
       debugMode = !debugMode;
+      const testControls = document.getElementById('test-controls');
       
       if (debugMode) {
         console.log('🔧 調試模式：開啟');
         document.getElementById('debug-toggle').textContent = '🔧 調試模式：開';
         document.getElementById('status-panel').style.background = 'rgba(0, 255, 0, 0.2)';
+        testControls.classList.add('visible'); // 顯示測試控制台
         
         // 顯示更多資訊
         setInterval(() => {
@@ -1120,6 +1126,7 @@
         console.log('🔧 調試模式：關閉');
         document.getElementById('debug-toggle').textContent = '🔧 調試模式';
         document.getElementById('status-panel').style.background = 'rgba(0, 0, 0, 0.8)';
+        testControls.classList.remove('visible'); // 隱藏測試控制台
       }
     }
 

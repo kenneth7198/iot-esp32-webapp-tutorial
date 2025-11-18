@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎤 互動麥克風 - 孟克的吶喊</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    }
+
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    /* 狀態面板 */
+    #status-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 20px;
+      color: white;
+      z-index: 100;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      min-width: 250px;
+    }
+
+    #status-panel h2 {
+      margin: 0 0 15px 0;
+      font-size: 20px;
+      color: #ffc107;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    .status-label {
+      color: #aaa;
+    }
+
+    .status-value {
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .indicator-green { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
+    .indicator-red { background: #f44336; box-shadow: 0 0 10px #f44336; }
+    .indicator-yellow { background: #ffc107; box-shadow: 0 0 10px #ffc107; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    /* 音量條 */
+    #volume-bar {
+      width: 100%;
+      height: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      overflow: hidden;
+      margin-top: 15px;
+      position: relative;
+    }
+
+    #volume-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4caf50 0%, #ffc107 50%, #f44336 100%);
+      width: 0%;
+      transition: width 0.1s ease-out;
+      border-radius: 15px;
+    }
+
+    #volume-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+      text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    /* 提示文字 */
+    #hint {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      padding: 15px 30px;
+      border-radius: 25px;
+      color: white;
+      font-size: 18px;
+      z-index: 100;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      text-align: center;
+    }
+
+    #hint.active {
+      background: rgba(255, 100, 100, 0.9);
+      border-color: #ff6b6b;
+      animation: shake 0.5s;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(-50%) rotate(0deg); }
+      25% { transform: translateX(-50%) rotate(-5deg); }
+      75% { transform: translateX(-50%) rotate(5deg); }
+    }
+
+    /* 調試按鈕 */
+    #debug-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 100;
+      transition: all 0.3s;
+      display: none;
+    }
+
+    #debug-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- 狀態面板 -->
+  <div id="status-panel">
+    <h2>
+      🎤 麥克風狀態
+    </h2>
+    <div class="status-row">
+      <span class="status-label">連線狀態</span>
+      <span class="status-value" id="ws-status">
+        連接中...
+        <span class="status-indicator indicator-yellow"></span>
+      </span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">麥克風數值</span>
+      <span class="status-value" id="mic-value">0</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">音量等級</span>
+      <span class="status-value" id="volume-level">0%</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">放大倍率</span>
+      <span class="status-value" id="scale-value">1.0x</span>
+    </div>
+    
+    <div id="volume-bar">
+      <div id="volume-fill"></div>
+      <div id="volume-text">0%</div>
+    </div>
+  </div>
+
+  <!-- 提示文字 -->
+  <div id="hint" onclick="enableSound()">
+    🌬️ 對著麥克風吹氣，讓孟克吶喊！<br>
+    <small style="font-size: 14px; opacity: 0.8;">（點擊此處啟用聲音）</small>
+  </div>
+
+  <!-- 調試按鈕 -->
+  <button id="debug-toggle" onclick="toggleDebug()">
+    🔧 調試模式
+  </button>
+
+  <script>
+    // ==================== WebSocket 設定 ====================
+    const WS_URL = 'ws://192.168.100.200:8080';
+    let ws;
+    let wsConnected = false;
+
+    // ==================== 遊戲狀態 ====================
+    let screamImg;                    // 孟克吶喊圖片
+    let currentMicValue = 0;          // 當前麥克風數值
+    let targetScale = 1.0;            // 目標縮放比例
+    let currentScale = 1.0;           // 當前縮放比例
+    let isBlowing = false;            // 是否正在吹氣
+    
+    // 閾值設定
+    const BASE_THRESHOLD = 2000;      // 基礎閾值
+    const MAX_THRESHOLD = 4095;       // 最大值 (12-bit ADC)
+    const MIN_SCALE = 0.3;            // 最小縮放
+    const MAX_SCALE = 3.0;            // 最大縮放
+    
+    // 視覺效果
+    let shakeAmount = 0;              // 震動強度
+    let particles = [];               // 粒子效果
+    
+    // 音效
+    let screamSound;                  // 吶喊音效
+    let isSoundPlaying = false;       // 音效是否正在播放
+    let audioContext;                 // Web Audio Context
+    let gainNode;                     // 音量控制節點
+    let lastTriggerValue = 0;         // 上次觸發時的麥克風數值
+    let hasTriggered = false;         // 是否已觸發過
+    
+    let debugMode = false;            // 調試模式
+
+    // ==================== p5.js Preload ====================
+    function preload() {
+      // 載入孟克的吶喊圖片
+      screamImg = loadImage('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg');
+      
+      // 載入尖叫音效
+      screamSound = new Audio('jianjiao.m4a');
+      screamSound.loop = false;  // 不循環播放，播放一次完整的
+      screamSound.volume = 0.8;  // 音量 80%
+      screamSound.preload = 'auto';  // 預先載入
+      
+      console.log('📂 正在載入音效: jianjiao.m4a');
+      
+      // 監聽載入事件
+      screamSound.addEventListener('canplaythrough', () => {
+        console.log('✅ 音效載入完成');
+      });
+      
+      screamSound.addEventListener('error', (e) => {
+        console.error('❌ 音效載入失敗:', e);
+      });
+      
+      // 監聽播放結束
+      screamSound.addEventListener('ended', () => {
+        console.log('⏹️ 音效播放完成');
+        isSoundPlaying = false;
+        hasTriggered = false;  // 重置觸發狀態，允許下次播放
+      });
+    }
+
+    // ==================== p5.js Setup ====================
+    function setup() {
+      let canvas = createCanvas(windowWidth, windowHeight);
+      canvas.parent('canvas-container');
+      imageMode(CENTER);
+      
+      console.log('🎨 Canvas 初始化完成');
+      console.log('🔊 音效已載入: jianjiao.m4a');
+      
+      // 連接 WebSocket
+      connectWebSocket();
+    }
+
+    // ==================== p5.js Draw ====================
+    function draw() {
+      // 背景漸層
+      drawGradientBackground();
+      
+      // 更新縮放比例 (平滑過渡)
+      currentScale = lerp(currentScale, targetScale, 0.1);
+      
+      // 更新震動效果
+      if (shakeAmount > 0) {
+        shakeAmount *= 0.95;
+      }
+      
+      // 繪製孟克的吶喊
+      push();
+      translate(width / 2, height / 2);
+      
+      // 震動效果
+      if (shakeAmount > 0.1) {
+        translate(
+          random(-shakeAmount, shakeAmount),
+          random(-shakeAmount, shakeAmount)
+        );
+      }
+      
+      // 縮放和旋轉
+      scale(currentScale);
+      if (isBlowing && currentScale > 1.5) {
+        rotate(sin(frameCount * 0.1) * 0.05);
+      }
+      
+      // 繪製圖片
+      image(screamImg, 0, 0, 600, 800);
+      pop();
+      
+      // 繪製粒子效果
+      updateParticles();
+      drawParticles();
+      
+      // 當吹氣時產生粒子
+      if (isBlowing && frameCount % 5 === 0) {
+        createParticles();
+      }
+      
+      // 更新音效
+      updateSound();
+    }
+
+    // ==================== 背景繪製 ====================
+    function drawGradientBackground() {
+      for (let i = 0; i < height; i++) {
+        let inter = map(i, 0, height, 0, 1);
+        let c1 = color(30, 60, 114);
+        let c2 = color(42, 82, 152);
+        let c = lerpColor(c1, c2, inter);
+        
+        // 如果正在吹氣，加入紅色
+        if (isBlowing) {
+          let redAmount = map(currentScale, 1.0, MAX_SCALE, 0, 100);
+          c = lerpColor(c, color(150, 50, 50), redAmount / 100);
+        }
+        
+        stroke(c);
+        line(0, i, width, i);
+      }
+    }
+
+    // ==================== 音效控制 ====================
+    function updateSound() {
+      if (!screamSound) {
+        console.log('⚠️ 音效物件不存在');
+        return;
+      }
+      
+      // 當麥克風數值超過 2000 時，觸發播放
+      if (currentMicValue > BASE_THRESHOLD && !hasTriggered && !isSoundPlaying) {
+        // 開始播放完整音效
+        screamSound.currentTime = 0;  // 從頭開始
+        screamSound.play().then(() => {
+          console.log('🔊 開始播放音效 (麥克風數值:', currentMicValue, ')');
+          isSoundPlaying = true;
+          hasTriggered = true;  // 標記已觸發
+        }).catch(err => {
+          console.error('❌ 音效播放失敗:', err);
+          // 嘗試在用戶點擊後播放
+          document.addEventListener('click', () => {
+            screamSound.play().then(() => {
+              console.log('✅ 音效播放成功（點擊後）');
+              isSoundPlaying = true;
+              hasTriggered = true;
+            });
+          }, { once: true });
+        });
+      }
+      
+      // 當麥克風數值降到 2000 以下時，重置觸發狀態
+      if (currentMicValue <= BASE_THRESHOLD && hasTriggered) {
+        hasTriggered = false;
+        console.log('🔄 重置觸發狀態');
+      }
+    }
+    
+    // ==================== 粒子系統 ====================
+    function createParticles() {
+      let particleCount = map(currentScale, 1.0, MAX_SCALE, 2, 10);
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          x: width / 2 + random(-100, 100),
+          y: height / 2 + random(-100, 100),
+          vx: random(-3, 3),
+          vy: random(-5, -1),
+          life: 255,
+          size: random(5, 15),
+          color: color(random(200, 255), random(50, 100), random(50, 100))
+        });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 3;
+        p.size *= 0.98;
+        
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    function drawParticles() {
+      noStroke();
+      for (let p of particles) {
+        fill(red(p.color), green(p.color), blue(p.color), p.life);
+        ellipse(p.x, p.y, p.size);
+      }
+    }
+
+    // ==================== WebSocket 連接 ====================
+    function connectWebSocket() {
+      console.log('🌐 連接 WebSocket...');
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket 已連接');
+        wsConnected = true;
+        updateWSStatus(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (err) {
+          console.error('解析訊息錯誤:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket 錯誤:', error);
+        updateWSStatus(false);
+      };
+
+      ws.onclose = () => {
+        console.log('⚠️ WebSocket 已斷線，5秒後重連...');
+        wsConnected = false;
+        updateWSStatus(false);
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    function handleWebSocketMessage(data) {
+      if (data.type === 'mqtt_message') {
+        const topic = data.topic;
+        const payload = data.payload;
+
+        // 麥克風數據
+        if (topic === 'esp32/microphone/level') {
+          try {
+            const micData = JSON.parse(payload);
+            updateMicrophoneData(micData);
+          } catch (err) {
+            console.error('解析麥克風數據錯誤:', err);
+          }
+        }
+      }
+    }
+
+    // ==================== 更新麥克風數據 ====================
+    function updateMicrophoneData(data) {
+      currentMicValue = data.micValue || 0;
+      
+      // 更新 UI
+      document.getElementById('mic-value').textContent = currentMicValue;
+      
+      // 計算音量百分比
+      let volumePercent = map(currentMicValue, BASE_THRESHOLD, MAX_THRESHOLD, 0, 100);
+      volumePercent = constrain(volumePercent, 0, 100);
+      
+      // 計算縮放比例
+      if (currentMicValue > BASE_THRESHOLD) {
+        isBlowing = true;
+        
+        // 映射到縮放範圍
+        targetScale = map(
+          currentMicValue, 
+          BASE_THRESHOLD, 
+          MAX_THRESHOLD, 
+          MIN_SCALE, 
+          MAX_SCALE
+        );
+        targetScale = constrain(targetScale, MIN_SCALE, MAX_SCALE);
+        
+        // 更新音量條
+        document.getElementById('volume-fill').style.width = volumePercent + '%';
+        document.getElementById('volume-text').textContent = Math.round(volumePercent) + '%';
+        document.getElementById('volume-level').textContent = Math.round(volumePercent) + '%';
+        document.getElementById('scale-value').textContent = targetScale.toFixed(2) + 'x';
+        
+        // 震動效果
+        shakeAmount = map(currentMicValue, BASE_THRESHOLD, MAX_THRESHOLD, 0, 20);
+        
+        // 提示文字
+        const hint = document.getElementById('hint');
+        hint.classList.add('active');
+        if (targetScale > 2.0) {
+          hint.innerHTML = '🔥 太強了！繼續吹！';
+        } else if (targetScale > 1.5) {
+          hint.innerHTML = '💨 很好！用力吹！';
+        } else {
+          hint.innerHTML = '🌬️ 繼續吹氣！';
+        }
+        
+      } else {
+        isBlowing = false;
+        targetScale = lerp(targetScale, MIN_SCALE, 0.05);
+        
+        // 重置音量條
+        document.getElementById('volume-fill').style.width = '0%';
+        document.getElementById('volume-text').textContent = '0%';
+        document.getElementById('volume-level').textContent = '0%';
+        
+        // 提示文字
+        const hint = document.getElementById('hint');
+        hint.classList.remove('active');
+        hint.innerHTML = '🌬️ 對著麥克風吹氣，讓孟克吶喊！<br><small style="font-size: 14px; opacity: 0.8;">（點擊此處啟用聲音）</small>';
+      }
+      
+      if (debugMode) {
+        console.log('麥克風:', currentMicValue, '| 縮放:', targetScale.toFixed(2), '| 音量%:', volumePercent.toFixed(0));
+      }
+    }
+
+    // ==================== UI 更新 ====================
+    function updateWSStatus(connected) {
+      const statusEl = document.getElementById('ws-status');
+      if (connected) {
+        statusEl.innerHTML = '已連接 <span class="status-indicator indicator-green"></span>';
+      } else {
+        statusEl.innerHTML = '未連接 <span class="status-indicator indicator-red"></span>';
+      }
+    }
+
+    // ==================== 調試功能 ====================
+    function toggleDebug() {
+      debugMode = !debugMode;
+      const btn = document.getElementById('debug-toggle');
+      
+      if (debugMode) {
+        btn.textContent = '🔧 調試模式：開';
+        console.log('🔧 調試模式：開啟');
+      } else {
+        btn.textContent = '🔧 調試模式';
+        console.log('🔧 調試模式：關閉');
+      }
+    }
+    
+    // ==================== 啟用音效 ====================
+    function enableSound() {
+      if (screamSound && screamSound.paused) {
+        screamSound.play().then(() => {
+          console.log('✅ 音效已啟用（用戶點擊）');
+          screamSound.pause();
+          screamSound.currentTime = 0;
+        }).catch(err => {
+          console.error('❌ 無法啟用音效:', err);
+        });
+      }
+    }
+
+    // ==================== 響應式 ====================
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+
+    // ==================== 鍵盤測試 ====================
+    function keyPressed() {
+      if (key === 't' || key === 'T') {
+        // 測試吹氣效果
+        console.log('🧪 測試模式：模擬吹氣');
+        updateMicrophoneData({ micValue: 3500 });
+      } else if (key === 'r' || key === 'R') {
+        // 重置
+        console.log('🔄 重置狀態');
+        currentMicValue = 0;
+        targetScale = MIN_SCALE;
+        isBlowing = false;
+        particles = [];
+      }
+    }
+  </script>
+</body>
+</html>

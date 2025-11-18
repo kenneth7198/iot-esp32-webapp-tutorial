@@ -14,8 +14,8 @@
 #include <Ultrasonic.h>
 
 // ==================== WiFi 設定 ====================
-const char* WIFI_SSID = "NetArt";
-const char* WIFI_PASS = "1qaz2wsx";
+const char* WIFI_SSID = "XXXX";
+const char* WIFI_PASS = "XXXX";
 
 // ==================== 設備設定 ====================
 const char* DEVICE_NUMBER = "01";

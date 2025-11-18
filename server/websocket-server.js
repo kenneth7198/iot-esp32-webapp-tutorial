@@ -234,6 +234,20 @@ mqttClient.on('connect', () => {
       console.log('[MQTT] 已訂閱主題: poster/artwork');
     }
   });
+
+  // 訂閱麥克風數據
+  mqttClient.subscribe('esp32/microphone/level', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/microphone/level');
+    }
+  });
+
+  // 訂閱麥克風狀態
+  mqttClient.subscribe('esp32/microphone/status', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/microphone/status');
+    }
+  });
 });
 
 mqttClient.on('error', (err) => {
