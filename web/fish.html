@@ -613,13 +613,13 @@
       bait.lastComboTime = millis();
       bait.playerId = playerId;
       
-      // 檢查是否可以撈魚
+      // 檢查是否可以捕魚
       if (bait.comboCount >= bait.requiredCombo) {
-        tryTocatchFish(playerId);
+        tryToCatchFish(playerId);
       }
     }
 
-    function tryTocatchFish(playerId) {
+    function tryToCatchFish(playerId) {
       // 檢查釣餌範圍內是否有魚
       let caughtFish = null;
       let maxPoints = 0;
@@ -638,6 +638,9 @@
         // 成功撈到魚！
         catchFish(caughtFish, playerId);
         // 重置連擊
+        bait.comboCount = 0;
+      } else {
+        // 沒有魚，重置連擊
         bait.comboCount = 0;
       }
     }
@@ -661,6 +664,50 @@
       
       // 播放音效（如果有）
       playSound('catch');
+    }
+
+
+
+    function checkAndBroadcastFishStatus() {
+      // 只要 WebSocket 連接就廣播狀態（不需要 bait.isActive）
+      if (!wsConnected) return;
+      
+      // 檢查是否有魚在釣餌範圍內
+      let fishInRange = false;
+      let nearestFish = null;
+      let minDistance = Infinity;
+      
+      for (let fish of fishes) {
+        let d = dist(bait.x, bait.y, fish.x, fish.y);
+        if (d < bait.catchRange) {
+          fishInRange = true;
+          if (d < minDistance) {
+            minDistance = d;
+            nearestFish = fish;
+          }
+        }
+      }
+      
+      // 發送狀態到手機端
+      if (ws && ws.readyState === 1) {
+        const statusMessage = {
+          type: 'publish',
+          topic: 'esp32/fish/status',
+          payload: JSON.stringify({
+            fishInRange: fishInRange,
+            requiredCombo: bait.requiredCombo,
+            catchRange: bait.catchRange,
+            nearestFish: nearestFish ? {
+              name: nearestFish.name,
+              emoji: nearestFish.emoji,
+              points: nearestFish.points,
+              distance: Math.round(minDistance)
+            } : null,
+            timestamp: Date.now()
+          })
+        };
+        ws.send(JSON.stringify(statusMessage));
+      }
     }
 
     function drawBait() {
@@ -692,13 +739,36 @@
       fill(255, 255, 255, 150);
       ellipse(-3, -7, 4, 4);
       
-      // 繪製抓取範圍（半透明圓圈）
+      // 檢查是否有魚在範圍內
+      let fishInRange = false;
+      for (let fish of fishes) {
+        let d = dist(bait.x, bait.y, fish.x, fish.y);
+        if (d < bait.catchRange) {
+          fishInRange = true;
+          break;
+        }
+      }
+      
+      // 繪製抓取範圍（半透明圓圈）- 根據是否有魚在範圍內改變顏色
       noFill();
-      stroke(100, 200, 255, 100);
-      strokeWeight(2);
+      if (fishInRange) {
+        stroke(76, 175, 80, 150); // 綠色 - 有魚
+        strokeWeight(3);
+      } else {
+        stroke(100, 200, 255, 100); // 藍色 - 無魚
+        strokeWeight(2);
+      }
       ellipse(0, 0, bait.catchRange * 2, bait.catchRange * 2);
       
-      // 如果正在連擊，顯示進度圈
+      // 如果有魚在範圍內，顯示脈動提示圈
+      if (fishInRange) {
+        noFill();
+        stroke(76, 175, 80, 50 + sin(frameCount * 0.1) * 50);
+        strokeWeight(5);
+        ellipse(0, 0, bait.catchRange * 2 + 10, bait.catchRange * 2 + 10);
+      }
+      
+      // 如果正在連擊,顯示進度圈
       if (bait.comboCount > 0) {
         let progress = bait.comboCount / bait.requiredCombo;
         let angle = map(progress, 0, 1, 0, TWO_PI);
@@ -783,6 +853,11 @@
       // 繪製釣餌資訊
       drawBaitInfo();
       
+      // 檢查魚是否在釣餌範圍內（每30幀檢查一次）
+      if (frameCount % 30 === 0) {
+        checkAndBroadcastFishStatus();
+      }
+      
       // 更新特效
       updateScorePopups();
       updateFireworks();
@@ -843,24 +918,9 @@
     }
 
     function drawDistanceSensor() {
-      // 繪製距離感測器區域（在畫面中心）
+      // 不繪製圓圈，只顯示文字資訊（避免視覺干擾）
       push();
       translate(width / 2, height - 150);
-      
-      // 距離指示器
-      if (distanceNear) {
-        fill(76, 175, 80, 100);
-        stroke(76, 175, 80, 200);
-      } else {
-        fill(255, 152, 0, 50);
-        stroke(255, 152, 0, 150);
-      }
-      strokeWeight(3);
-      
-      // 繪製感測區域
-      let sensorRadius = map(currentDistance, 0, 50, 200, 50);
-      sensorRadius = constrain(sensorRadius, 50, 200);
-      ellipse(0, 0, sensorRadius * 2, sensorRadius * 2);
       
       // 距離文字
       fill(255);

@@ -106,7 +106,7 @@
       grid-template-columns: 1fr 1fr 1fr;
       grid-template-rows: 1fr 1fr 1fr;
       gap: 8px;
-      max-width: 250px;
+      max-width: 280px;
       margin: 0 auto;
       aspect-ratio: 1;
     }
@@ -137,10 +137,35 @@
       cursor: not-allowed;
     }
 
-    .dir-btn:nth-child(5) {
-      background: rgba(0, 0, 0, 0.3);
-      cursor: default;
-      pointer-events: none;
+    /* 中間的撈魚按鈕 */
+    #center-scoop-btn {
+      background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+      border: 3px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      font-size: 32px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(33, 150, 243, 0.5);
+    }
+
+    #center-scoop-btn:active {
+      background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+      transform: scale(0.9);
+    }
+
+    #center-scoop-btn.ready {
+      background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+      animation: readyGlow 1.5s infinite;
+    }
+
+    #center-scoop-btn.disabled {
+      background: linear-gradient(135deg, #999 0%, #666 100%);
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #center-scoop-btn.combo-active {
+      background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+      animation: comboGlow 0.3s;
     }
 
     /* 連擊撈魚區 */
@@ -333,28 +358,35 @@
           <span class="status-indicator indicator-red"></span>
         </span>
       </div>
+      <div class="status-row" id="hooking-status-row" style="display: none;">
+        <span>拉魚階段</span>
+        <span id="hooking-stage-status">
+          --
+          <span class="status-indicator indicator-yellow"></span>
+        </span>
+      </div>
     </div>
 
     <!-- 方向控制 -->
     <div class="control-section">
-      <div class="section-title">🎯 移動釣餌</div>
+      <div class="section-title">🎯 移動釣餌 + 連擊撈魚</div>
       <div class="direction-pad">
         <div></div>
         <button class="dir-btn" id="btn-up" data-dir="up">↑</button>
         <div></div>
         <button class="dir-btn" id="btn-left" data-dir="left">←</button>
-        <div class="dir-btn"></div>
+        <button class="dir-btn" id="center-scoop-btn">🎣</button>
         <button class="dir-btn" id="btn-right" data-dir="right">→</button>
         <div></div>
         <button class="dir-btn" id="btn-down" data-dir="down">↓</button>
         <div></div>
       </div>
-      <div class="hint">點擊方向鍵移動釣餌位置</div>
+      <div class="hint">方向鍵移動釣餌，中間按鈕連擊撈魚</div>
     </div>
 
     <!-- 連擊撈魚 -->
     <div class="scoop-section">
-      <div class="section-title">💥 連擊撈魚</div>
+      <div class="section-title">💥 連擊狀態</div>
       
       <div id="combo-display">
         <div class="combo-count" id="combo-count">0</div>
@@ -369,13 +401,41 @@
         需要 <span id="required-combo">5</span> 次連擊撈魚
       </div>
 
-      <button id="scoop-button" class="disabled">
-        🎣 點擊撈魚
-      </button>
-
       <div class="hint">
         靠近螢幕（<10cm）且魚在範圍內時<br>
-        快速連續點擊按鈕撈魚！
+        快速連續點擊中間按鈕撈魚！
+      </div>
+    </div>
+
+    <!-- 拉魚進度 -->
+    <div class="scoop-section" id="hooking-section" style="display: none;">
+      <div class="section-title">🎣 拉魚進度</div>
+      
+      <div style="text-align: center; margin: 15px 0;">
+        <div style="font-size: 32px; margin-bottom: 10px;" id="hooking-fish-emoji">🐟</div>
+        <div style="font-size: 18px; font-weight: bold; color: #ffd700;" id="hooking-fish-name">-</div>
+        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;" id="hooking-fish-points">- 分</div>
+      </div>
+
+      <div style="text-align: center; margin: 20px 0;">
+        <div style="font-size: 48px; font-weight: bold; color: #4caf50;" id="hooking-stage-display">1/3</div>
+        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">當前階段</div>
+      </div>
+
+      <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; margin: 10px 0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span style="font-size: 14px;">目標距離</span>
+          <span style="font-size: 14px; font-weight: bold; color: #ffd700;" id="target-distance">10cm</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 14px;">當前距離</span>
+          <span style="font-size: 14px; font-weight: bold;" id="current-distance-hooking">--cm</span>
+        </div>
+      </div>
+
+      <div class="hint" style="background: rgba(255,100,100,0.2); border: 2px solid rgba(255,100,100,0.5);">
+        ⚠️ 拉魚中請靠近螢幕！<br>
+        依序達到 <strong>10cm → 15cm → 20cm</strong>
       </div>
     </div>
 
@@ -406,7 +466,7 @@
     const PLAYER_ID = 'player-' + Math.random().toString(36).substr(2, 9);
 
     // MQTT 主題
-    const TOPIC_MOVE = 'esp32/fish/move';
+    const TOPIC_MOVE = 'esp32/fish/direction';
     const TOPIC_SCOOP = 'esp32/fish/scoop';
     const TOPIC_JOIN = 'esp32/fish/join';
     const TOPIC_COMBO = 'esp32/fish/combo';
@@ -448,10 +508,10 @@
         });
       });
 
-      // 撈魚按鈕事件
-      const scoopBtn = document.getElementById('scoop-button');
-      scoopBtn.addEventListener('click', handleScoopClick);
-      scoopBtn.addEventListener('touchstart', (e) => {
+      // 中間撈魚按鈕事件
+      const centerBtn = document.getElementById('center-scoop-btn');
+      centerBtn.addEventListener('click', handleScoopClick);
+      centerBtn.addEventListener('touchstart', (e) => {
         e.preventDefault();
         handleScoopClick();
       });
@@ -522,6 +582,16 @@
             updateFishStatus(status.fishInRange, status.requiredCombo);
           } catch (err) {
             console.error('解析魚狀態錯誤:', err);
+          }
+        }
+        
+        // 拉魚狀態（新增）
+        if (topic === 'esp32/fish/hooking') {
+          try {
+            const hookingStatus = JSON.parse(payload);
+            updateHookingStatus(hookingStatus);
+          } catch (err) {
+            console.error('解析拉魚狀態錯誤:', err);
           }
         }
 
@@ -614,7 +684,7 @@
       updateComboDisplay();
 
       // 視覺和觸覺回饋
-      const button = document.getElementById('scoop-button');
+      const button = document.getElementById('center-scoop-btn');
       button.classList.add('combo-active');
       setTimeout(() => button.classList.remove('combo-active'), 300);
 
@@ -625,7 +695,7 @@
       // 發送連擊數據
       sendMessage(TOPIC_COMBO, {
         playerId: PLAYER_ID,
-        combo: comboCount,
+        comboCount: comboCount,
         timestamp: now
       });
 
@@ -725,27 +795,90 @@
       updateButtonState();
     }
 
-    function updateButtonState() {
-      const button = document.getElementById('scoop-button');
-      const dirButtons = document.querySelectorAll('.dir-btn[data-dir]');
-
-      if (wsConnected && distanceNear) {
-        // 方向按鈕可用
-        dirButtons.forEach(btn => btn.classList.remove('disabled'));
-
-        // 撈魚按鈕狀態
-        if (fishInRange) {
-          button.classList.remove('disabled');
-          button.classList.add('ready');
+    function updateHookingStatus(status) {
+      console.log('🎣 拉魚狀態更新:', status);
+      
+      const hookingSection = document.getElementById('hooking-section');
+      const hookingStatusRow = document.getElementById('hooking-status-row');
+      
+      if (status.isHooking) {
+        // 顯示拉魚區域
+        hookingSection.style.display = 'block';
+        hookingStatusRow.style.display = 'flex';
+        
+        // 更新魚的資訊
+        if (status.fish) {
+          document.getElementById('hooking-fish-emoji').textContent = status.fish.emoji;
+          document.getElementById('hooking-fish-name').textContent = status.fish.name;
+          document.getElementById('hooking-fish-points').textContent = `${status.fish.points} 分`;
+        }
+        
+        // 更新階段顯示
+        const stageDisplay = `${status.currentStage + 1}/${status.totalStages}`;
+        document.getElementById('hooking-stage-display').textContent = stageDisplay;
+        document.getElementById('hooking-stage-status').innerHTML = `
+          ${stageDisplay}
+          <span class="status-indicator indicator-yellow"></span>
+        `;
+        
+        // 更新目標距離
+        if (status.currentStage < status.stages.length) {
+          const targetDist = status.stages[status.currentStage];
+          document.getElementById('target-distance').textContent = `${targetDist}cm`;
+        }
+        
+        // 更新當前距離
+        document.getElementById('current-distance-hooking').textContent = `${status.currentDistance}cm`;
+        
+        // 如果達到目標距離,改變顏色
+        const currentDistEl = document.getElementById('current-distance-hooking');
+        if (status.currentStage < status.stages.length && 
+            status.currentDistance <= status.stages[status.currentStage]) {
+          currentDistEl.style.color = '#4caf50';
         } else {
-          button.classList.add('disabled');
-          button.classList.remove('ready');
+          currentDistEl.style.color = '#ffffff';
+        }
+        
+        // 震動提示
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
         }
       } else {
-        // 全部停用
+        // 隱藏拉魚區域
+        hookingSection.style.display = 'none';
+        hookingStatusRow.style.display = 'none';
+        
+        // 如果是完成狀態
+        if (status.completed) {
+          showFeedback('🎉 成功捕獲！', '#4caf50');
+          if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200, 100, 200]);
+          }
+        }
+      }
+    }
+
+    function updateButtonState() {
+      const centerBtn = document.getElementById('center-scoop-btn');
+      const dirButtons = document.querySelectorAll('.dir-btn[data-dir]');
+
+      if (wsConnected) {
+        // 方向按鈕永遠可用（只要連線）
+        dirButtons.forEach(btn => btn.classList.remove('disabled'));
+
+        // 中間撈魚按鈕需要距離近且魚在範圍內
+        if (distanceNear && fishInRange) {
+          centerBtn.classList.remove('disabled');
+          centerBtn.classList.add('ready');
+        } else {
+          centerBtn.classList.add('disabled');
+          centerBtn.classList.remove('ready');
+        }
+      } else {
+        // 未連線時全部停用
         dirButtons.forEach(btn => btn.classList.add('disabled'));
-        button.classList.add('disabled');
-        button.classList.remove('ready');
+        centerBtn.classList.add('disabled');
+        centerBtn.classList.remove('ready');
       }
     }
 

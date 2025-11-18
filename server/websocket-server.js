@@ -200,6 +200,20 @@ mqttClient.on('connect', () => {
     }
   });
 
+  // 訂閱撈魚遊戲魚的狀態（新增）
+  mqttClient.subscribe('esp32/fish/status', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/fish/status');
+    }
+  });
+
+  // 訂閱撈魚遊戲拉魚狀態（新增）
+  mqttClient.subscribe('esp32/fish/hooking', (err) => {
+    if (!err) {
+      console.log('[MQTT] 已訂閱主題: esp32/fish/hooking');
+    }
+  });
+
   // 訂閱互動海報狀態
   mqttClient.subscribe('poster/status', (err) => {
     if (!err) {
