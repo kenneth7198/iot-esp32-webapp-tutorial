@@ -15,8 +15,8 @@
 #include <PubSubClient.h>
 
 // ==================== WiFi 設定 ====================
-const char* ssid = "XXXXX";           // 修改為你的 WiFi 名稱
-const char* password = "XXXXXX";   // 修改為你的 WiFi 密碼
+const char* ssid = "NetArt";           // 修改為你的 WiFi 名稱
+const char* password = "1qaz2wsx";   // 修改為你的 WiFi 密碼
 
 // ==================== 固定 IP ====================
 IPAddress local_IP(192, 168, 100, 211);
