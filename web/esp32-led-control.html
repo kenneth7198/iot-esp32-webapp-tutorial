@@ -274,6 +274,22 @@
 
         case 'led_command_sent':
           addLog(`📤 LED 指令已發送: ${JSON.stringify(data.payload)}`, 'event');
+          if (data.payload) {
+            const cmd = data.payload.GPIO10 || data.payload.GPIO23 || data.payload.state;
+            if (cmd) {
+              updateLedStatus(cmd === 'on' || cmd === 'ON');
+            }
+          }
+          break;
+
+        case 'led_status':
+          addLog(`📥 ESP32 狀態回報: ${JSON.stringify(data.payload)}`, 'success');
+          if (data.payload) {
+            const cmd = data.payload.GPIO10 || data.payload.GPIO23 || data.payload.state;
+            if (cmd) {
+              updateLedStatus(cmd === 'on' || cmd === 'ON');
+            }
+          }
           break;
 
         case 'mqtt_message':

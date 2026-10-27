@@ -280,8 +280,17 @@ wss.on('connection', (ws, req) => {
       // 根據訊息類型處理
       switch (message.type) {
         case 'led_control':
-          // 轉發 LED 控制指令到 MQTT
+          // 處理 LED 控制指令（WebSocket 廣播）
           handleLedControl(message.payload);
+          break;
+
+        case 'led_status':
+          // 接收來自 ESP32 的 LED 狀態回報並廣播給所有前端
+          broadcast({
+            type: 'led_status',
+            payload: message.payload,
+            timestamp: new Date().toISOString()
+          });
           break;
 
         case 'get_status':
@@ -342,26 +351,22 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// 處理 LED 控制
+// 處理 LED 控制（純 WebSocket 廣播給 ESP32 與前端，不依賴 MQTT Server）
 function handleLedControl(payload) {
   console.log('[控制] LED 控制指令:', payload);
   
-  // 發送到 MQTT (給 ESP32)
-  const mqttPayload = JSON.stringify(payload);
-  mqttClient.publish(TOPIC_LED_CONTROL, mqttPayload, { qos: 1 }, (err) => {
-    if (err) {
-      console.error('[MQTT] 發送失敗:', err.message);
-    } else {
-      console.log(`[MQTT] 已發送到 ${TOPIC_LED_CONTROL}:`, mqttPayload);
-      
-      // 廣播給所有 WebSocket 客戶端
-      broadcast({
-        type: 'led_command_sent',
-        payload: payload,
-        timestamp: new Date().toISOString()
-      });
-    }
+  // 直接透過 WebSocket 廣播給所有客戶端（包含 ESP32 與網頁前端）
+  broadcast({
+    type: 'led_command_sent',
+    payload: payload,
+    timestamp: new Date().toISOString()
   });
+
+  // 若 MQTT 有連線則順便轉發（選用，未開 MQTT Server 也不影響 WebSocket 控制）
+  if (mqttClient && mqttClient.connected) {
+    const mqttPayload = JSON.stringify(payload);
+    mqttClient.publish(TOPIC_LED_CONTROL, mqttPayload, { qos: 1 });
+  }
 }
 
 // 處理狀態查詢
