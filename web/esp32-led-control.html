@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
       padding: 1rem;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+
     .main-card {
       background: rgba(255, 255, 255, 0.95);
       border-radius: 20px;
@@ -20,6 +22,7 @@
       margin: 0 auto;
       max-width: 600px;
     }
+
     .status-badge {
       display: inline-block;
       padding: 0.5rem 1rem;
@@ -27,9 +30,17 @@
       font-weight: 600;
       font-size: 0.9rem;
     }
-    .status-connected { background: #10b981; color: white; }
-    .status-disconnected { background: #ef4444; color: white; }
-    
+
+    .status-connected {
+      background: #10b981;
+      color: white;
+    }
+
+    .status-disconnected {
+      background: #ef4444;
+      color: white;
+    }
+
     .led-button {
       width: 100%;
       height: 80px;
@@ -39,18 +50,23 @@
       border: none;
       transition: all 0.3s ease;
     }
-    .led-button:active { transform: scale(0.95); }
+
+    .led-button:active {
+      transform: scale(0.95);
+    }
+
     .led-on {
       background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
       color: white;
       box-shadow: 0 4px 20px rgba(251, 191, 36, 0.5);
     }
+
     .led-off {
       background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
       color: white;
       box-shadow: 0 4px 20px rgba(107, 114, 128, 0.3);
     }
-    
+
     .log-container {
       background: #1f2937;
       color: #10b981;
@@ -62,10 +78,20 @@
       padding: 1rem;
       margin-top: 1rem;
     }
-    .log-entry { margin-bottom: 0.5rem; line-height: 1.4; }
-    .log-time { color: #6b7280; }
-    .log-topic { color: #60a5fa; }
-    
+
+    .log-entry {
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .log-time {
+      color: #6b7280;
+    }
+
+    .log-topic {
+      color: #60a5fa;
+    }
+
     .led-status-indicator {
       width: 40px;
       height: 40px;
@@ -74,13 +100,18 @@
       transition: all 0.3s ease;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
     }
+
     .led-status-on {
       background: #fbbf24;
       box-shadow: 0 0 30px #fbbf24;
     }
-    .led-status-off { background: #4b5563; }
+
+    .led-status-off {
+      background: #4b5563;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="main-card">
@@ -99,9 +130,8 @@
         <div class="mb-4">
           <h5><i class="fas fa-network-wired"></i> WebSocket 伺服器</h5>
           <div class="mb-3">
-            <input type="text" id="wsUrl" class="form-control" 
-                   value="ws://192.168.100.200:8080"
-                   placeholder="ws://192.168.100.200:8080">
+            <input type="text" id="wsUrl" class="form-control" value="ws://192.168.50.116:8081"
+              placeholder="ws://192.168.50.116:8081">
           </div>
           <div class="d-grid gap-2">
             <button id="btnConnect" class="btn btn-primary">
@@ -178,12 +208,12 @@
         warning: '#f59e0b',
         event: '#60a5fa'
       };
-      
+
       const logEntry = document.createElement('div');
       logEntry.className = 'log-entry';
       logEntry.style.color = colors[type] || colors.info;
       logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${message}`;
-      
+
       elements.logContainer.appendChild(logEntry);
       elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
     }
@@ -191,7 +221,7 @@
     // 更新連線狀態
     function updateConnectionStatus(connected) {
       isConnected = connected;
-      
+
       if (connected) {
         elements.connectionStatus.className = 'status-badge status-connected';
         elements.connectionStatus.innerHTML = '<i class="fas fa-check-circle"></i> 已連線';
@@ -212,7 +242,7 @@
     // 更新 LED 狀態
     function updateLedStatus(isOn) {
       currentLedState = isOn;
-      
+
       if (isOn) {
         elements.ledIndicator.className = 'led-status-indicator led-status-on';
         elements.ledStatusText.innerHTML = 'LED 狀態: <strong style="color: #f59e0b;">ON</strong>';
@@ -231,7 +261,7 @@
       }
 
       addLog(`正在連線到 ${url}...`, 'info');
-      
+
       try {
         ws = new WebSocket(url);
 
@@ -266,7 +296,7 @@
     // 處理伺服器訊息
     function handleServerMessage(data) {
       console.log('收到伺服器訊息:', data);
-      
+
       switch (data.type) {
         case 'welcome':
           addLog(`📨 ${data.message}`, 'success');
@@ -275,7 +305,7 @@
         case 'led_command_sent':
           addLog(`📤 LED 指令已發送: ${JSON.stringify(data.payload)}`, 'event');
           if (data.payload) {
-            const cmd = data.payload.GPIO10 || data.payload.GPIO23 || data.payload.state;
+            const cmd = data.payload.GPIO8 || data.payload.GPIO10 || data.payload.GPIO23 || data.payload.state;
             if (cmd) {
               updateLedStatus(cmd === 'on' || cmd === 'ON');
             }
@@ -285,7 +315,7 @@
         case 'led_status':
           addLog(`📥 ESP32 狀態回報: ${JSON.stringify(data.payload)}`, 'success');
           if (data.payload) {
-            const cmd = data.payload.GPIO10 || data.payload.GPIO23 || data.payload.state;
+            const cmd = data.payload.GPIO8 || data.payload.GPIO10 || data.payload.GPIO23 || data.payload.state;
             if (cmd) {
               updateLedStatus(cmd === 'on' || cmd === 'ON');
             }
@@ -294,12 +324,13 @@
 
         case 'mqtt_message':
           addLog(`<span class="log-topic">📥 MQTT ${data.topic}</span>: ${data.payload}`, 'event');
-          
+
           // 解析 LED 狀態
           try {
             const payload = JSON.parse(data.payload);
-            if (payload.GPIO23) {
-              const ledState = (payload.GPIO23 === 'on' || payload.GPIO23 === 'ON');
+            const cmd = payload.GPIO8 || payload.GPIO10 || payload.GPIO23 || payload.state;
+            if (cmd) {
+              const ledState = (cmd === 'on' || cmd === 'ON');
               updateLedStatus(ledState);
             }
           } catch (e) {
@@ -326,7 +357,7 @@
         addLog('❌ WebSocket 未連線！', 'error');
         return;
       }
-      
+
       ws.send(JSON.stringify(message));
     }
 
@@ -335,11 +366,11 @@
       sendMessage({
         type: 'led_control',
         payload: {
-          GPIO23: state ? 'on' : 'off'
+          GPIO8: state ? 'on' : 'off'
         }
       });
-      
-      addLog(`🎯 發送 LED ${state ? 'ON' : 'OFF'} 指令`, 'info');
+
+      addLog(`🎯 發送 LED ${state ? 'ON' : 'OFF'} 指令 (GPIO8)`, 'info');
       updateLedStatus(state);
     }
 
@@ -369,4 +400,5 @@
     });
   </script>
 </body>
+
 </html>

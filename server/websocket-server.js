@@ -6,9 +6,11 @@ const fs = require('fs');
 const path = require('path');
 
 // 設定
-const HTTP_PORT = 8081;  // HTTP 伺服器端口（給靜態檔案用）
-const WS_PORT = 8080;    // WebSocket 伺服器端口（給前端用）
-const MQTT_BROKER = 'mqtt://localhost:1883';  // Mosquitto MQTT Broker
+const SERVER_IP = '192.168.50.116'; // 主要 Server IP
+const HTTP_PORT = 80;  // HTTP 伺服器端口（給靜態檔案用）
+const WS_PORT = 8081;    // WebSocket 伺服器端口（給前端用）
+const ENABLE_MQTT = false; // 是否啟用 MQTT（先取消，不啟用）
+const MQTT_BROKER = `mqtt://${SERVER_IP}:1883`;  // Mosquitto MQTT Broker (若啟用)
 
 // MQTT 主題
 const TOPIC_LED_CONTROL = 'sensor/LED';
@@ -31,17 +33,17 @@ const mimeTypes = {
 const httpServer = http.createServer((req, res) => {
   // 移除 URL 查詢參數（? 之後的部分）
   const urlWithoutQuery = req.url.split('?')[0];
-  
+
   // 處理根路徑
   let filePath = urlWithoutQuery === '/' ? '/index.html' : urlWithoutQuery;
-  
+
   // 建立完整路徑
   filePath = path.join(__dirname, '..', 'web', filePath);
-  
+
   // 取得副檔名
   const extname = path.extname(filePath);
   const contentType = mimeTypes[extname] || 'text/plain';
-  
+
   // 讀取並回傳檔案
   fs.readFile(filePath, (err, content) => {
     if (err) {
@@ -63,7 +65,7 @@ httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
   // 取得本機 IP
   const networkInterfaces = require('os').networkInterfaces();
   const addresses = [];
-  
+
   for (const name of Object.keys(networkInterfaces)) {
     for (const net of networkInterfaces[name]) {
       if (net.family === 'IPv4' && !net.internal) {
@@ -71,188 +73,194 @@ httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
       }
     }
   }
-  
+
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🌐 HTTP 靜態檔案伺服器已啟動');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`\n📱 訪問網址: http://192.168.100.200:${HTTP_PORT}`);
+  console.log(`\n📱 主要伺服器網址: http://${SERVER_IP}:${HTTP_PORT}`);
   if (addresses.length > 0) {
     addresses.forEach(addr => {
       console.log(`🔗 本機網址: http://${addr}:${HTTP_PORT}`);
     });
   }
   console.log(`💻 本機訪問: http://localhost:${HTTP_PORT}`);
-  
+
   console.log('\n🎮 可用的互動專案：');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('1️⃣  LED 控制');
   console.log('    📄 /esp32-led-control.html');
   console.log('    🎛️  遠端控制 ESP32 LED 開關\n');
-  
+
   console.log('2️⃣  多人互動音樂節拍遊戲');
   console.log('    📄 /processing-control.html');
   console.log('    🎵 多人手機搖晃產生音樂節拍\n');
-  
+
   console.log('3️⃣  Ghost Maze 鬼魂迷宮');
   console.log('    📄 /ghost-maze.html');
   console.log('    👻 手機控制鬼魂移動收集寶物\n');
-  
+
   console.log('4️⃣  Generative Art 生成藝術');
   console.log('    📄 /art.html');
   console.log('    🎨 觸控感測器控制藝術生成\n');
-  
+
   console.log('5️⃣  Audiovisual Multiplayer 視聽多人遊戲');
   console.log('    📄 /audiovisual-multiplayer.html');
   console.log('    🎹 多人協作音樂視覺化\n');
-  
+
   console.log('6️⃣  Fish 撈魚遊戲');
   console.log('    📄 /fish.html');
   console.log('    🐟 超音波感測器撈魚互動遊戲');
   console.log('    📱 /mobile-fish-simple.html (簡易版控制器 - 推薦)');
   console.log('    📱 /mobile-fish-scoop.html (完整版控制器)\n');
-  
+
   console.log('7️⃣  Interactive Poster 互動海報');
   console.log('    📄 /interactive-poster.html');
   console.log('    🎨 超音波感測器觸發孟克《吶喊》動態效果');
   console.log('    📱 /mobile-poster-capture.html (手機拍攝控制器)');
   console.log('    🖼️  /interactive-poster-gallery.html (10幅世界名畫藝廊 - 最新版)\n');
-  
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 });
 
 // 建立 WebSocket 伺服器
 const wss = new WebSocket.Server({ port: WS_PORT });
-console.log(`[WebSocket] 伺服器運行於 ws://0.0.0.0:${WS_PORT}`);
+console.log(`[WebSocket] 伺服器運行於 ws://${SERVER_IP}:${WS_PORT} (ws://0.0.0.0:${WS_PORT})`);
 
-// 連接到 MQTT Broker
-const mqttClient = mqtt.connect(MQTT_BROKER);
+// MQTT 客戶端（若 ENABLE_MQTT 為 true 才建立連線）
+let mqttClient = null;
 
-mqttClient.on('connect', () => {
-  console.log('[MQTT] 已連接到 Mosquitto Broker');
-  
-  // 訂閱 ESP32 的狀態主題
-  mqttClient.subscribe(TOPIC_LED_STATUS, (err) => {
-    if (!err) {
-      console.log(`[MQTT] 已訂閱主題: ${TOPIC_LED_STATUS}`);
-    }
-  });
-  
-  // 訂閱所有 ESP32 設備的光線數據
-  mqttClient.subscribe('esp32/+/light', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/+/light');
-    }
-  });
-  
-  // 訂閱所有鬼魂移動指令
-  mqttClient.subscribe('ghost/move/#', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: ghost/move/#');
-    }
-  });
-  
-  // 訂閱抓取寶物指令
-  mqttClient.subscribe('ghost/grab/#', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: ghost/grab/#');
-    }
-  });
-  
-  // 訂閱藝術按鈕
-  mqttClient.subscribe('art/button/#', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: art/button/#');
-    }
-  });
-  
-  // 訂閱觸控數據
-  mqttClient.subscribe('esp32/+/touch', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/+/touch');
-    }
-  });
-  
-  // 訂閱距離感測器數據（用於撈魚遊戲）
-  mqttClient.subscribe('esp32/+/distance', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/+/distance');
-    }
+if (ENABLE_MQTT) {
+  mqttClient = mqtt.connect(MQTT_BROKER);
+
+  mqttClient.on('connect', () => {
+    console.log('[MQTT] 已連接到 Mosquitto Broker');
+
+    // 訂閱 ESP32 的狀態主題
+    mqttClient.subscribe(TOPIC_LED_STATUS, (err) => {
+      if (!err) {
+        console.log(`[MQTT] 已訂閱主題: ${TOPIC_LED_STATUS}`);
+      }
+    });
+
+    // 訂閱所有 ESP32 設備的光線數據
+    mqttClient.subscribe('esp32/+/light', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/+/light');
+      }
+    });
+
+    // 訂閱所有鬼魂移動指令
+    mqttClient.subscribe('ghost/move/#', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: ghost/move/#');
+      }
+    });
+
+    // 訂閱抓取寶物指令
+    mqttClient.subscribe('ghost/grab/#', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: ghost/grab/#');
+      }
+    });
+
+    // 訂閱藝術按鈕
+    mqttClient.subscribe('art/button/#', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: art/button/#');
+      }
+    });
+
+    // 訂閱觸控數據
+    mqttClient.subscribe('esp32/+/touch', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/+/touch');
+      }
+    });
+
+    // 訂閱距離感測器數據（用於撈魚遊戲）
+    mqttClient.subscribe('esp32/+/distance', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/+/distance');
+      }
+    });
+
+    // 訂閱撈魚遊戲方向控制
+    mqttClient.subscribe('esp32/fish/direction', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/fish/direction');
+      }
+    });
+
+    // 訂閱撈魚遊戲連擊
+    mqttClient.subscribe('esp32/fish/combo', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/fish/combo');
+      }
+    });
+
+    // 訂閱撈魚遊戲舊版動作（相容性）
+    mqttClient.subscribe('esp32/fish/scoop', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/fish/scoop');
+      }
+    });
+
+    // 訂閱撈魚遊戲魚的狀態（新增）
+    mqttClient.subscribe('esp32/fish/status', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/fish/status');
+      }
+    });
+
+    // 訂閱撈魚遊戲拉魚狀態（新增）
+    mqttClient.subscribe('esp32/fish/hooking', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/fish/hooking');
+      }
+    });
+
+    // 訂閱互動海報狀態
+    mqttClient.subscribe('poster/status', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: poster/status');
+      }
+    });
+
+    // 訂閱海報畫面撈取請求
+    mqttClient.subscribe('poster/capture/request', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: poster/capture/request');
+      }
+    });
+
+    // 訂閱畫作更新（藝廊輪播）
+    mqttClient.subscribe('poster/artwork', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: poster/artwork');
+      }
+    });
+
+    // 訂閱麥克風數據
+    mqttClient.subscribe('esp32/microphone/level', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/microphone/level');
+      }
+    });
+
+    // 訂閱麥克風狀態
+    mqttClient.subscribe('esp32/microphone/status', (err) => {
+      if (!err) {
+        console.log('[MQTT] 已訂閱主題: esp32/microphone/status');
+      }
+    });
   });
 
-  // 訂閱撈魚遊戲方向控制
-  mqttClient.subscribe('esp32/fish/direction', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/fish/direction');
-    }
+  mqttClient.on('error', (err) => {
+    console.error('[MQTT] 連接錯誤:', err.message);
   });
-
-  // 訂閱撈魚遊戲連擊
-  mqttClient.subscribe('esp32/fish/combo', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/fish/combo');
-    }
-  });
-
-  // 訂閱撈魚遊戲舊版動作（相容性）
-  mqttClient.subscribe('esp32/fish/scoop', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/fish/scoop');
-    }
-  });
-
-  // 訂閱撈魚遊戲魚的狀態（新增）
-  mqttClient.subscribe('esp32/fish/status', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/fish/status');
-    }
-  });
-
-  // 訂閱撈魚遊戲拉魚狀態（新增）
-  mqttClient.subscribe('esp32/fish/hooking', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/fish/hooking');
-    }
-  });
-
-  // 訂閱互動海報狀態
-  mqttClient.subscribe('poster/status', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: poster/status');
-    }
-  });
-
-  // 訂閱海報畫面撈取請求
-  mqttClient.subscribe('poster/capture/request', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: poster/capture/request');
-    }
-  });
-
-  // 訂閱畫作更新（藝廊輪播）
-  mqttClient.subscribe('poster/artwork', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: poster/artwork');
-    }
-  });
-
-  // 訂閱麥克風數據
-  mqttClient.subscribe('esp32/microphone/level', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/microphone/level');
-    }
-  });
-
-  // 訂閱麥克風狀態
-  mqttClient.subscribe('esp32/microphone/status', (err) => {
-    if (!err) {
-      console.log('[MQTT] 已訂閱主題: esp32/microphone/status');
-    }
-  });
-});
-
-mqttClient.on('error', (err) => {
-  console.error('[MQTT] 連接錯誤:', err.message);
-});
+} else {
+  console.log('[MQTT] ⚠️ MQTT 目前已停用 (ENABLE_MQTT = false)，僅使用純 WebSocket 模式');
+}
 
 // 儲存所有連接的 WebSocket 客戶端
 const clients = new Set();
@@ -261,7 +269,7 @@ const clients = new Set();
 wss.on('connection', (ws, req) => {
   const clientIp = req.socket.remoteAddress;
   console.log(`[WebSocket] 新客戶端連接: ${clientIp}`);
-  
+
   clients.add(ws);
 
   // 發送歡迎訊息
@@ -304,8 +312,8 @@ wss.on('connection', (ws, req) => {
           break;
 
         case 'subscribe':
-          // 動態訂閱 MQTT 主題
-          if (message.topic) {
+          // 動態訂閱 MQTT 主題（若啟用 MQTT）
+          if (ENABLE_MQTT && mqttClient && message.topic) {
             mqttClient.subscribe(message.topic, (err) => {
               if (!err) {
                 console.log(`[MQTT] 客戶端訂閱: ${message.topic}`);
@@ -315,12 +323,19 @@ wss.on('connection', (ws, req) => {
           break;
 
         case 'publish':
-          // 發布 MQTT 訊息（用於鬼魂移動等）
-          if (message.topic && message.payload) {
+          // 發布 MQTT 訊息（若 MQTT 停用則直接透過 WebSocket 廣播轉發）
+          if (ENABLE_MQTT && mqttClient && message.topic && message.payload) {
             mqttClient.publish(message.topic, message.payload, { qos: 1 }, (err) => {
               if (!err) {
                 console.log(`[MQTT] 發布到 ${message.topic}`);
               }
+            });
+          } else if (!ENABLE_MQTT && message.topic && message.payload) {
+            broadcast({
+              type: 'mqtt_message',
+              topic: message.topic,
+              payload: typeof message.payload === 'object' ? JSON.stringify(message.payload) : String(message.payload),
+              timestamp: new Date().toISOString()
             });
           }
           break;
@@ -354,7 +369,7 @@ wss.on('connection', (ws, req) => {
 // 處理 LED 控制（純 WebSocket 廣播給 ESP32 與前端，不依賴 MQTT Server）
 function handleLedControl(payload) {
   console.log('[控制] LED 控制指令:', payload);
-  
+
   // 直接透過 WebSocket 廣播給所有客戶端（包含 ESP32 與網頁前端）
   broadcast({
     type: 'led_command_sent',
@@ -363,7 +378,7 @@ function handleLedControl(payload) {
   });
 
   // 若 MQTT 有連線則順便轉發（選用，未開 MQTT Server 也不影響 WebSocket 控制）
-  if (mqttClient && mqttClient.connected) {
+  if (ENABLE_MQTT && mqttClient && mqttClient.connected) {
     const mqttPayload = JSON.stringify(payload);
     mqttClient.publish(TOPIC_LED_CONTROL, mqttPayload, { qos: 1 });
   }
@@ -372,13 +387,15 @@ function handleLedControl(payload) {
 // 處理狀態查詢
 function handleGetStatus(ws) {
   console.log('[查詢] 客戶端請求狀態');
-  
+
   // 這裡可以從資料庫或快取獲取狀態
   // 目前簡單回傳一個示例
   ws.send(JSON.stringify({
     type: 'status_response',
     status: {
-      connected: mqttClient.connected,
+      connected: (ENABLE_MQTT && mqttClient) ? mqttClient.connected : false,
+      mqttEnabled: ENABLE_MQTT,
+      serverIp: SERVER_IP,
       timestamp: new Date().toISOString()
     }
   }));
@@ -387,17 +404,17 @@ function handleGetStatus(ws) {
 // 處理搖晃事件
 function handleShakeEvent(message) {
   console.log('[事件] 偵測到搖晃事件:', message);
-  
+
   // 自動開啟 LED
-  handleLedControl({ GPIO23: 'on' });
-  
+  handleLedControl({ GPIO8: 'on' });
+
   // 記錄事件（可以存入資料庫）
   const event = {
     type: 'shake_event',
     timestamp: new Date().toISOString(),
     action: 'LED turned on by shake'
   };
-  
+
   // 廣播給所有客戶端
   broadcast(event);
 }
@@ -412,51 +429,55 @@ function broadcast(data) {
   });
 }
 
-// 接收來自 MQTT 的訊息（ESP32 狀態更新）
-mqttClient.on('message', (topic, payload) => {
-  const payloadStr = payload.toString();
-  
-  // 簡化日誌輸出（光線數據頻繁，不完整顯示）
-  if (topic.includes('/light')) {
-    console.log(`[MQTT] 💡 ${topic}`);
-  } else if (topic.includes('/move')) {
-    console.log(`[MQTT] 🎮 ${topic}: ${payloadStr}`);
-  } else if (topic.includes('/grab')) {
-    console.log(`[MQTT] 💎 ${topic}: ${payloadStr}`);
-  } else if (topic.includes('art/button')) {
-    console.log(`[MQTT] 🎨 ${topic}: ${payloadStr}`);
-  } else if (topic.includes('/distance')) {
-    console.log(`[MQTT] 📏 ${topic}: ${payloadStr}`);
-  } else {
-    console.log(`[MQTT] 收到訊息 ${topic}:`, payloadStr);
-  }
-  
-  // 轉發給所有 WebSocket 客戶端
-  broadcast({
-    type: 'mqtt_message',
-    topic: topic,
-    payload: payloadStr,
-    timestamp: new Date().toISOString()
+// 接收來自 MQTT 的訊息（ESP32 狀態更新，僅在啟用 MQTT 時監聽）
+if (ENABLE_MQTT && mqttClient) {
+  mqttClient.on('message', (topic, payload) => {
+    const payloadStr = payload.toString();
+
+    // 簡化日誌輸出（光線數據頻繁，不完整顯示）
+    if (topic.includes('/light')) {
+      console.log(`[MQTT] 💡 ${topic}`);
+    } else if (topic.includes('/move')) {
+      console.log(`[MQTT] 🎮 ${topic}: ${payloadStr}`);
+    } else if (topic.includes('/grab')) {
+      console.log(`[MQTT] 💎 ${topic}: ${payloadStr}`);
+    } else if (topic.includes('art/button')) {
+      console.log(`[MQTT] 🎨 ${topic}: ${payloadStr}`);
+    } else if (topic.includes('/distance')) {
+      console.log(`[MQTT] 📏 ${topic}: ${payloadStr}`);
+    } else {
+      console.log(`[MQTT] 收到訊息 ${topic}:`, payloadStr);
+    }
+
+    // 轉發給所有 WebSocket 客戶端
+    broadcast({
+      type: 'mqtt_message',
+      topic: topic,
+      payload: payloadStr,
+      timestamp: new Date().toISOString()
+    });
   });
-});
+}
 
 // 優雅關閉
 process.on('SIGINT', () => {
   console.log('\n[系統] 正在關閉伺服器...');
-  
+
   // 關閉所有 WebSocket 連接
   clients.forEach((client) => {
     client.close();
   });
-  
-  // 斷開 MQTT
-  mqttClient.end();
-  
+
+  // 斷開 MQTT（若有啟用）
+  if (ENABLE_MQTT && mqttClient) {
+    mqttClient.end();
+  }
+
   // 關閉 HTTP 伺服器
   httpServer.close(() => {
     console.log('[HTTP] HTTP 伺服器已關閉');
   });
-  
+
   // 關閉 WebSocket 伺服器
   wss.close(() => {
     console.log('[WebSocket] WebSocket 伺服器已關閉');

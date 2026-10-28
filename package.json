@@ -20,7 +20,8 @@
   "license": "MIT",
   "dependencies": {
     "mqtt": "^5.3.5",
-    "ws": "^8.18.0"
+    "websocket": "^1.0.35",
+    "ws": "^8.22.0"
   },
   "repository": {
     "type": "git",

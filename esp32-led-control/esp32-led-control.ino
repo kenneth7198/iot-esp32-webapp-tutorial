@@ -14,28 +14,28 @@
 #include <ArduinoJson.h>
 
 // ==================== WiFi 設定 ====================
-const char* WIFI_SSID = "你的 WiFi 名稱";      // 修改為你的 WiFi 名稱
-const char* WIFI_PASS = "你的 WiFi 密碼";      // 修改為你的 WiFi 密碼
+const char* WIFI_SSID = "Techart_MESH";      // 修改為你的 WiFi 名稱
+const char* WIFI_PASS = "035715131@a";      // 修改為你的 WiFi 密碼
 
 // ==================== 網路設定 (固定 IP) ====================
 // 若想改用 DHCP 自動取得 IP，請將下行註解掉
 #define USE_STATIC_IP
 
 #ifdef USE_STATIC_IP
-IPAddress local_IP(192, 168, 100, 205);        // ESP32-C3 的固定 IP
-IPAddress gateway(192, 168, 100, 1);           // 路由器閘道
+IPAddress local_IP(192, 168, 50, 205);        // ESP32-C3 的固定 IP
+IPAddress gateway(192, 168, 50, 1);           // 路由器閘道
 IPAddress subnet(255, 255, 255, 0);            // 子網路遮罩
 IPAddress primaryDNS(8, 8, 8, 8);              // DNS 伺服器
 #endif
 
 // ==================== WebSocket 伺服器設定 ====================
 // 對應 server/websocket-server.js 的位址與端口
-const char* WS_HOST = "192.168.100.200";       // WebSocket 伺服器 IP
-const int   WS_PORT = 8080;                    // WebSocket 伺服器 Port
+const char* WS_HOST = "192.168.50.116";       // WebSocket 伺服器 IP
+const int   WS_PORT = 8081;                    // WebSocket 伺服器 Port
 const char* WS_PATH = "/";                     // WebSocket 路徑
 
 // ==================== 硬體設定 ====================
-const int LED_PIN = 10;                        // LED 接在 ESP32-C3 的 GPIO 10
+const int LED_PIN = 8;                        // LED 接在 ESP32-C3 的 GPIO 8
 
 // ==================== 全域變數 ====================
 WebSocketsClient webSocket;
@@ -103,6 +103,7 @@ void sendLedStatus() {
   StaticJsonDocument<128> doc;
   doc["type"] = "led_status";
   JsonObject payload = doc.createNestedObject("payload");
+  payload["GPIO8"] = currentLedState ? "on" : "off";
   payload["GPIO10"] = currentLedState ? "on" : "off";
   payload["GPIO23"] = currentLedState ? "on" : "off";
 
@@ -172,7 +173,9 @@ void handleIncomingJson(const char* jsonStr) {
     JsonObject payloadObj = doc["payload"];
     if (!payloadObj.isNull()) {
       const char* cmd = nullptr;
-      if (payloadObj.containsKey("GPIO10")) {
+      if (payloadObj.containsKey("GPIO8")) {
+        cmd = payloadObj["GPIO8"];
+      } else if (payloadObj.containsKey("GPIO10")) {
         cmd = payloadObj["GPIO10"];
       } else if (payloadObj.containsKey("GPIO23")) {
         cmd = payloadObj["GPIO23"];
